@@ -1,0 +1,176 @@
+{
+  "repository": "https://github.com/MurkyYT/cs2-map-icons",
+  "commit": "d7de35003fd907224ff42f2dd5a2853eb2ee028f",
+  "retrieved": "2026-10-20",
+  "rights": "Radar images and overview data are property of Valve Corporation. Mirror: MurkyYT/cs2-map-icons.",
+  "files": [
+    {
+      "map": "de_nuke",
+      "file": "de_nuke_lower_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_nuke_lower_radar_psd.png",
+      "sha256": "040c958f141d0365ca9125388bc20228b0df0ac6abd1fe78d743ecfa1be4bb64",
+      "bytes": 80046
+    },
+    {
+      "map": "de_nuke",
+      "file": "de_nuke_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_nuke_radar_psd.png",
+      "sha256": "6230346d3ce969006062fbd02220b083245f621ef366ce26a42dc27a80120bd0",
+      "bytes": 80130
+    },
+    {
+      "map": "de_nuke",
+      "file": "de_nuke.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_nuke.txt",
+      "sha256": "877a8df76cee8e5abc4756df162790ed25c5f5dd994ed9d895a7bc3a9c3ac585",
+      "bytes": 746
+    },
+    {
+      "map": "de_mirage",
+      "file": "de_mirage_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_mirage_radar_psd.png",
+      "sha256": "5de1cc16362e538dc5f4561a24661cb1fb1c15c77ec289e32b44c0fc07bfb85b",
+      "bytes": 111393
+    },
+    {
+      "map": "de_mirage",
+      "file": "de_mirage.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_mirage.txt",
+      "sha256": "f201fd608d6ea0bd091920620a4f74e97197d26caf36f133875b58d5ba1d77fe",
+      "bytes": 640
+    },
+    {
+      "map": "de_dust2",
+      "file": "de_dust2_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_dust2_radar_psd.png",
+      "sha256": "3be20317d1383da6f390a5bb245cabb65857ef08b1e2c5b82b5938a8cb3167bb",
+      "bytes": 153557
+    },
+    {
+      "map": "de_dust2",
+      "file": "de_dust2.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_dust2.txt",
+      "sha256": "97947e99bc7930fc06dc15af3dcf942dbca5ca1c6f36119a089615fd4b383620",
+      "bytes": 541
+    },
+    {
+      "map": "de_inferno",
+      "file": "de_inferno_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_inferno_radar_psd.png",
+      "sha256": "e4929829f8475d2edcb44ee3537ffad094dc8008b4d6f5aa81e66e77ddb077ba",
+      "bytes": 109883
+    },
+    {
+      "map": "de_inferno",
+      "file": "de_inferno.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_inferno.txt",
+      "sha256": "ff93b0ff1f6705ccfb4daf3b038dd88ccdf3ca776823667c19782650e94d2c54",
+      "bytes": 414
+    },
+    {
+      "map": "de_ancient",
+      "file": "de_ancient_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_ancient_radar_psd.png",
+      "sha256": "88fe108f7cc54d89b9c6179155cc39f419aa02f79df1a3f36031049577fd1952",
+      "bytes": 63894
+    },
+    {
+      "map": "de_ancient",
+      "file": "de_ancient_v1_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_ancient_v1_radar_psd.png",
+      "sha256": "88fe108f7cc54d89b9c6179155cc39f419aa02f79df1a3f36031049577fd1952",
+      "bytes": 63894
+    },
+    {
+      "map": "de_ancient",
+      "file": "de_ancient.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_ancient.txt",
+      "sha256": "f6b420a983e2702c3c0d903a901483b6bc61fcf5eef2b6fb62da485ba93eb3c1",
+      "bytes": 447
+    },
+    {
+      "map": "de_anubis",
+      "file": "de_anubis_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_anubis_radar_psd.png",
+      "sha256": "7c9badbb4ecb655d3d789724ca9d615bb06abf721d776176018ee3263a8a7b94",
+      "bytes": 177532
+    },
+    {
+      "map": "de_anubis",
+      "file": "de_anubis.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_anubis.txt",
+      "sha256": "f83755ed8a85365923ac565d3fbd2ab1391e75d8b89cfd759da9214bf80e9fff",
+      "bytes": 254
+    },
+    {
+      "map": "de_overpass",
+      "file": "de_overpass_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_overpass_radar_psd.png",
+      "sha256": "ab3bfff1c3cc8da47eda921511b3eb34028e24b718b85709ac080f123fd4c108",
+      "bytes": 231444
+    },
+    {
+      "map": "de_overpass",
+      "file": "de_overpass.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_overpass.txt",
+      "sha256": "23b44305d79a15dc9feea71528a7015d6f3612044a8367f29b20c65aec2e7897",
+      "bytes": 444
+    },
+    {
+      "map": "de_train",
+      "file": "de_train_lower_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_train_lower_radar_psd.png",
+      "sha256": "c1852ca4d1f0ba7ccb426a853f57f203ab5431b32e59323b6bd5cd216d7b40ed",
+      "bytes": 103798
+    },
+    {
+      "map": "de_train",
+      "file": "de_train_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_train_radar_psd.png",
+      "sha256": "26007eea00d58e722058b11b96b16e08d4b28bf5494a4df141463a7dbcb0648a",
+      "bytes": 114812
+    },
+    {
+      "map": "de_train",
+      "file": "de_train.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_train.txt",
+      "sha256": "13600850d41b034d973102602e5694e6c09057390d4d37490e605f54b71b4d55",
+      "bytes": 547
+    },
+    {
+      "map": "de_vertigo",
+      "file": "de_vertigo_lower_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_vertigo_lower_radar_psd.png",
+      "sha256": "89ab966da946061906ab0d8876b9b45761291e8080149246611e12de526cd673",
+      "bytes": 98793
+    },
+    {
+      "map": "de_vertigo",
+      "file": "de_vertigo_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/images/radars/de_vertigo_radar_psd.png",
+      "sha256": "3cfa3f044ed5883098e78ab63939a3c9e39fc2c0c2100e59acf4e2c3fa09df43",
+      "bytes": 77009
+    },
+    {
+      "map": "de_vertigo",
+      "file": "de_vertigo.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/d7de35003fd907224ff42f2dd5a2853eb2ee028f/data/radar_info/de_vertigo.txt",
+      "sha256": "61cd5156d443c10c898283dfb98cdfaf5befb2a24afa18e27f76b89b4d908541",
+      "bytes": 767
+    },
+    {
+      "map": "de_cache",
+      "file": "de_cache.txt",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/e2e3a061475b3461fda61f52041b01b0c4c4cde6/data/radar_info/de_cache.txt",
+      "sha256": "4344e0364bc9ec31f9f3fc04fe24aacb465e5252f8c173e661cebec586b54c0d",
+      "bytes": 527
+    },
+    {
+      "map": "de_cache",
+      "file": "de_cache_radar_psd.png",
+      "source": "https://raw.githubusercontent.com/MurkyYT/cs2-map-icons/e2e3a061475b3461fda61f52041b01b0c4c4cde6/images/radars/de_cache_radar_psd.png",
+      "sha256": "afa47fd3111f007cedfbb580f740780427531e8ce6b9dcc55a13d9104e2ed6a6",
+      "bytes": 74557
+    }
+  ]
+}

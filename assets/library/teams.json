@@ -1,0 +1,162 @@
+[
+  {
+    "id": "01f631e6-ffe1-4e4d-95ee-a72727f81337",
+    "kind": "team",
+    "name": "Team ATOM",
+    "data": {
+      "id": "navi",
+      "name": "Team ATOM",
+      "tag": "ATOM",
+      "logo": "",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "T",
+      "steamIds": []
+    },
+    "updatedAt": 1793915265654
+  },
+  {
+    "id": "03ccd99a-976d-4fa0-904f-f2da7670543f",
+    "kind": "team",
+    "name": "Пролижи",
+    "data": {
+      "id": "navi",
+      "name": "Пролижи",
+      "tag": "Пролижи",
+      "logo": "",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "T",
+      "steamIds": []
+    },
+    "updatedAt": 1793915385210
+  },
+  {
+    "id": "3483bde0-3702-4ed9-b35c-df375e3fc1af",
+    "kind": "team",
+    "name": "dmitrieVci Team",
+    "data": {
+      "id": "fnatic",
+      "name": "dmitrieVci Team",
+      "tag": "dmitri",
+      "logo": "",
+      "color": "#00c9e8",
+      "secondaryColor": "#067b91",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793915338750
+  },
+  {
+    "id": "42f4b1b0-df58-4b94-90ac-c20c13494453",
+    "kind": "team",
+    "name": "Team Youth",
+    "data": {
+      "id": "fnatic",
+      "name": "Team Youth",
+      "tag": "Youth",
+      "logo": "",
+      "color": "#00c9e8",
+      "secondaryColor": "#067b91",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793915250449
+  },
+  {
+    "id": "565a57a3-f6f0-4a62-a61f-22d6dbc82f33",
+    "kind": "team",
+    "name": "5П",
+    "data": {
+      "id": "fnatic",
+      "name": "5П",
+      "tag": "5П",
+      "logo": "",
+      "color": "#00c9e8",
+      "secondaryColor": "#067b91",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793915394017
+  },
+  {
+    "id": "5f42006c-a5e7-45dd-9e43-fd61e6c83f28",
+    "kind": "team",
+    "name": "Колибри",
+    "data": {
+      "id": "navi",
+      "name": "Колибри",
+      "tag": "Колибри",
+      "logo": "",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "T",
+      "steamIds": []
+    },
+    "updatedAt": 1793915180248
+  },
+  {
+    "id": "7b334411-5d63-4e65-b2ef-8d74c65e30c5",
+    "kind": "team",
+    "name": "OnlyFanSPbSO",
+    "data": {
+      "id": "navi",
+      "name": "OnlyFanSPbSO",
+      "tag": "OnlyFan",
+      "logo": "",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "T",
+      "steamIds": []
+    },
+    "updatedAt": 1793915313166
+  },
+  {
+    "id": "99a21d2a-9f7c-4114-a400-c969e34c7278",
+    "kind": "team",
+    "name": "Team Future",
+    "data": {
+      "id": "navi",
+      "name": "Team Future",
+      "tag": "Future",
+      "logo": "",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "T",
+      "steamIds": []
+    },
+    "updatedAt": 1793915229904
+  },
+  {
+    "id": "c3df63f9-15df-4990-bfe2-5865225a63e7",
+    "kind": "team",
+    "name": "Перспектива",
+    "data": {
+      "id": "fnatic",
+      "name": "Перспектива",
+      "tag": "Перспект",
+      "logo": "",
+      "color": "#00c9e8",
+      "secondaryColor": "#067b91",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793915214177
+  },
+  {
+    "id": "e280219e-9cec-41c7-a5f3-fff053c44bc9",
+    "kind": "team",
+    "name": "Косоглазый алабай",
+    "data": {
+      "id": "fnatic",
+      "name": "Косоглазый алабай",
+      "tag": "Алабай",
+      "logo": "",
+      "color": "#00c9e8",
+      "secondaryColor": "#067b91",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793915292726
+  }
+]

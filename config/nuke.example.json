@@ -1,0 +1,34 @@
+{
+  "id": "de_nuke",
+  "name": "Nuke",
+  "originX": -3453,
+  "originY": 2887,
+  "scale": 7,
+  "rotation": 0,
+  "size": 1024,
+  "calibrated": true,
+  "layers": [
+    {
+      "id": "upper",
+      "name": "Верхний",
+      "image": "/assets/maps/de_nuke_radar_psd.png",
+      "minZ": -495.0,
+      "maxZ": 10000.0
+    },
+    {
+      "id": "lower",
+      "name": "Нижний",
+      "image": "/assets/maps/de_nuke_lower_radar_psd.png",
+      "minZ": -10000.0,
+      "maxZ": -495.0
+    }
+  ],
+  "regions": [],
+  "sites": [],
+  "viewBounds": {
+    "x": 41,
+    "y": 258,
+    "width": 980,
+    "height": 534
+  }
+}
