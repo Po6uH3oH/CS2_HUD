@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useId, type CSSProperties, type ReactNode } from 'react';
 import type { GameState, Grenade, HudSettings, Player, RadarMap, Settings, TeamState, Timer } from '../../../../packages/shared/types';
 import { economy, observerOrder, presentationState, remaining, selectRadarLayer, worldToRadar } from '../../../../packages/core';
-import { grenadePhase } from '../../../../packages/core/grenade-presentation';
+import { grenadePhase, grenadeBursts, bombPulsePeriod } from '../../../../packages/core/grenade-presentation';
 import { primaryWeapon, weaponFill } from '../../../../packages/core/player-loadout';
 import { useRadarFocus } from './useRadarFocus';
 import { RadarTrack } from '../../../../packages/core/radar-motion';
@@ -225,17 +225,22 @@ function Radar({ state, settings }: { state: GameState; settings: Settings }) {
 }
 
 function RadarLayer({ state, map, layer, image, hud }: { state: GameState; map: RadarMap; layer: string; image: string; hud: HudSettings }) {
-  const previousGrenades = useRef<Grenade[]>([]);
-  useEffect(() => { previousGrenades.current = []; setBursts([]); }, [state.round]);
+  const previousGrenades = useRef<{ context: string; items: Grenade[] }>({ context: '', items: [] });
   const [bursts, setBursts] = useState<{ grenade: Grenade; expires: number }[]>([]);
   useEffect(() => {
-    const now = performance.now();
-    const next = new Map(state.grenades.map(g => [g.id, g]));
-    const vanished = state.connected && !['over', 'gameover', 'unknown'].includes(state.phase) ? previousGrenades.current.filter(g => /frag|hegrenade/.test(g.type) && grenadePhase(g) === 'flight' && (!next.has(g.id) || grenadePhase(next.get(g.id)!) === 'expired')) : [];
-    previousGrenades.current = state.grenades;
-    setBursts(old => [...old.filter(b => b.expires > now), ...vanished.map(grenade => ({grenade, expires: now + 550}))]);
-  }, [state.revision, state.connected]);
-  useEffect(() => { if (!bursts.length) return; const t = window.setTimeout(() => setBursts(old => old.filter(b => b.expires > performance.now())), 560); return () => clearTimeout(t); }, [bursts]);
+    const now = performance.now(), context = `${state.mode}:${state.map}:${state.round}`;
+    const sameContext = previousGrenades.current.context === context;
+    const events = state.connected && !['over', 'gameover', 'unknown'].includes(state.phase)
+      ? grenadeBursts(sameContext ? previousGrenades.current.items : [], state.grenades) : [];
+    previousGrenades.current = { context, items: state.grenades };
+    setBursts(old => [...(sameContext && state.connected ? old.filter(b => b.expires > now) : []),
+      ...events.map(grenade => ({ grenade, expires: now + (grenade.type.includes('flash') ? 700 : 550) }))]);
+  }, [state.revision, state.connected, state.round, state.map, state.mode]);
+  useEffect(() => {
+    if (!bursts.length) return;
+    const t = window.setTimeout(() => setBursts(old => old.filter(b => b.expires > performance.now())), Math.max(0, Math.min(...bursts.map(b => b.expires)) - performance.now()) + 5);
+    return () => clearTimeout(t);
+  }, [bursts]);
   const bounds = map.viewBounds ?? { x: 0, y: 0, width: map.size, height: map.size };
   const focusPlayers = state.players.filter(p => p.alive && p.position && selectRadarLayer(p.position, map) === layer);
   const focusPoints = focusPlayers.map(p => worldToRadar(p.position!, map));
@@ -255,16 +260,16 @@ function RadarLayer({ state, map, layer, image, hud }: { state: GameState; map: 
       const point = worldToRadar(player.deathPosition!, map), team = state.teams.find(t => t.id === player.teamId);
       return <g className="ov-death-marker" key={`death-${player.steamId}`} transform={`translate(${point.x},${point.y}) scale(.65)`} style={{ color: team?.color }}><title>{`Место смерти: ${player.name}`}</title><path d={`M${-markerSize * .65},${-markerSize * .65}l${markerSize * 1.3},${markerSize * 1.3}m0,${-markerSize * 1.3}l${-markerSize * 1.3},${markerSize * 1.3}`} fill="none" stroke="#07121e" strokeWidth={markerSize * .7} /><path d={`M${-markerSize * .65},${-markerSize * .65}l${markerSize * 1.3},${markerSize * 1.3}m0,${-markerSize * 1.3}l${-markerSize * 1.3},${markerSize * 1.3}`} fill="none" stroke="currentColor" strokeWidth={markerSize * .35} /></g>;
     })}
-    {hud.showGrenades && state.grenades.filter(g => g.flames.length ? g.flames.some(p => selectRadarLayer(p, map) === layer) : selectRadarLayer(g.position, map) === layer).map(grenade => <RadarGrenade key={grenade.id} grenade={grenade} map={map} layer={layer} size={markerSize} sampleAt={state.receivedAt} animate={hud.animate && state.connected} />)}
-    {hud.showGrenades && bursts.filter(b => selectRadarLayer(b.grenade.position, map) === layer).map(b => { const p = worldToRadar(b.grenade.position, map); return <g key={`${b.grenade.id}-${b.expires}`} transform={`translate(${p.x},${p.y})`}><image className="ov-he-burst" href="/assets/icons/effects/he-burst.svg" x={-markerSize*2} y={-markerSize*2} width={markerSize*4} height={markerSize*4} /></g>; })}
+    {hud.showGrenades && state.grenades.filter(g => g.flames.length ? g.flames.some(p => selectRadarLayer(p, map) === layer) : selectRadarLayer(g.position, map) === layer).map(grenade => <RadarGrenade key={grenade.id} grenade={grenade} map={map} layer={layer} size={markerSize} ownerColor={state.teams.find(t => t.id === state.players.find(p => p.steamId === grenade.owner)?.teamId)?.color} sampleAt={state.receivedAt} animate={hud.animate && state.connected} />)}
+    {hud.showGrenades && bursts.filter(b => selectRadarLayer(b.grenade.position, map) === layer).map(b => { const p = worldToRadar(b.grenade.position, map); return <g key={`${b.grenade.id}-${b.expires}`} transform={`translate(${p.x},${p.y})`}><GrenadeBurst type={b.grenade.type} size={markerSize} animate={hud.animate} /></g>; })}
     {positions.map(player => {
       const point = worldToRadar(player.position!, map);
       const team = state.teams.find(entry => entry.id === player.teamId);
       const forward = player.forward ? worldToRadar({ x: player.position!.x + player.forward.x * 100, y: player.position!.y + player.forward.y * 100, z: player.position!.z }, map) : null;
       const angle = forward ? Math.atan2(forward.y - point.y, forward.x - point.x) * 180 / Math.PI : null;
-      return <RadarMotion key={player.steamId} x={point.x} y={point.y} sampleAt={state.receivedAt} animate={hud.animate && state.connected} color={team?.color || '#fff'}><title>{`${player.name} · ${player.side}`}</title>{angle != null && <path d={`M${markerSize * .7},${-markerSize * .62} L${markerSize * 1.9},0 L${markerSize * .7},${markerSize * .62}Z`} transform={`rotate(${angle})`} fill="currentColor" opacity=".55" />}<circle r={markerSize} fill="currentColor" stroke={player.steamId === state.observedId ? '#fff' : '#111923'} strokeWidth={map.size / 300 * symbolScale} /><circle className="ov-player-flash" r={markerSize} fill="white" opacity={Math.min(1, Math.max(0, (player.flashed ?? 0) / 255))} /><text textAnchor="middle" dominantBaseline="central" fill="#101820" fontSize={markerSize * 1.25} fontWeight="900">{player.slot ?? "?"}</text>{player.hasBomb && <rect x={markerSize * .5} y={markerSize * .5} width={markerSize * .65} height={markerSize * .8} rx={markerSize * .1} fill="#ffd47a" stroke="#0e151d" strokeWidth="2" />}</RadarMotion>;
+      return <RadarMotion key={player.steamId} x={point.x} y={point.y} sampleAt={state.receivedAt} animate={hud.animate && state.connected} color={team?.color || '#fff'}><title>{`${player.name} · ${player.side}`}</title>{angle != null && <path d={`M${markerSize * .7},${-markerSize * .62} L${markerSize * 1.9},0 L${markerSize * .7},${markerSize * .62}Z`} transform={`rotate(${angle})`} fill="currentColor" opacity=".55" />}<circle r={markerSize} fill="currentColor" stroke={player.steamId === state.observedId ? '#fff' : '#111923'} strokeWidth={map.size / 300 * symbolScale} /><circle className="ov-player-flash" r={markerSize} fill="white" opacity={Math.min(1, Math.max(0, (player.flashed ?? 0) / 255))} /><text textAnchor="middle" dominantBaseline="central" fill="#101820" fontSize={markerSize * 1.25} fontWeight="900">{player.slot ?? "?"}</text>{player.hasBomb && <image className="ov-map-bomb" href="/assets/icons/effects/map_bomb.svg" x={markerSize * .35} y={markerSize * .35} width={markerSize} height={markerSize} />}</RadarMotion>;
     })}
-    {state.bomb.position && ['planted', 'defusing', 'dropped'].includes(state.bomb.state) && selectRadarLayer(state.bomb.position, map) === layer && (() => { const point = worldToRadar(state.bomb.position, map); return <g transform={`translate(${point.x},${point.y})`}><rect x={-markerSize / 2} y={-markerSize * .7} width={markerSize} height={markerSize * 1.4} rx={4 * symbolScale} fill="#ffe1a0" stroke="#18212b" strokeWidth={3 * symbolScale} /><title>{`C4 · ${state.bomb.state}`}</title></g>; })()}
+    <RadarBomb state={state} map={map} layer={layer} size={markerSize} animate={hud.animate} />
   </svg>;
 }
 
@@ -291,19 +296,55 @@ function RadarMotion({ x, y, color, animate, sampleAt, children }: { x: number; 
   return <g ref={node} style={{ color }}>{children}</g>;
 }
 
-function RadarGrenade({ grenade, map, layer, size, animate, sampleAt }: { sampleAt: number; grenade: Grenade; map: RadarMap; layer: string; size: number; animate: boolean }) {
+function RadarGrenade({ grenade, map, layer, size, animate, sampleAt, ownerColor }: { ownerColor?: string; sampleAt: number; grenade: Grenade; map: RadarMap; layer: string; size: number; animate: boolean }) {
   const point = worldToRadar(grenade.position, map);
   const effectId = useId();
   const phase = grenadePhase(grenade);
   const smoke = phase === 'smoke';
   if (phase === 'expired') return null;
-  if (phase === 'burst') return <g transform={`translate(${point.x},${point.y})`} className="ov-grenade-burst"><circle r={size * 1.8} fill={grenade.type.includes('flash') ? '#fff9d7' : '#ffab58'} fillOpacity=".5" /><circle r={size * 2.2} fill="none" stroke="#fff2bf" strokeWidth="3" /></g>;
+  if (phase === 'burst') return null; // Event layer owns the finite explosion animation.
   if (phase === 'fire') return <g className="ov-radar-fire"><title>Огонь</title>{grenade.flames.filter(p => selectRadarLayer(p, map) === layer).map((p, i) => { const pos = worldToRadar(p, map); return <FirePatch key={i} x={pos.x} y={pos.y} size={144 / map.scale} animate={animate} />; })}</g>;
-  return <RadarMotion x={point.x} y={point.y} sampleAt={sampleAt} animate={animate && !smoke}><title>{smoke ? 'Раскрытый дым' : `Граната: ${grenade.type}`}</title>{smoke ? <g className="ov-smoke-area"><defs><radialGradient id={effectId}><stop offset="0" stopColor="#d4e0e6" stopOpacity=".9" /><stop offset=".65" stopColor="#c3d2db" stopOpacity=".75" /><stop offset="1" stopColor="#bbcbd5" stopOpacity=".15" /></radialGradient></defs><circle r={160 / map.scale} fill={`url(#${effectId})`} /><circle r={144 / map.scale} fill="none" stroke="#101c29" strokeOpacity=".9" strokeWidth="7" /><circle r={144 / map.scale} fill="none" stroke="#f4fbff" strokeOpacity=".95" strokeWidth="3" /></g> : <><circle r={size * 1.05} fill="#13202eed" stroke="#e1ebf6" strokeWidth="2" /><g transform={`translate(${-size * .8},${-size * .8}) scale(${size * 1.6 / 24})`} style={{ color: /molotov|incendiary/.test(grenade.type) ? '#ffb66b' : '#fff' }}><EquipmentIcon className="ov-radar-glyph" kind={grenadeKind(grenade.type)} /></g></>}</RadarMotion>;
+  return <RadarMotion x={point.x} y={point.y} sampleAt={sampleAt} animate={animate && !smoke}><title>{smoke ? 'Раскрытый дым' : `Граната: ${grenade.type}`}</title>{smoke ? <g className="ov-smoke-area"><defs><radialGradient id={effectId}><stop offset="0" stopColor="#d4e0e6" stopOpacity=".9" /><stop offset=".65" stopColor="#c3d2db" stopOpacity=".75" /><stop offset="1" stopColor="#bbcbd5" stopOpacity=".15" /></radialGradient></defs><circle r={160 / map.scale} fill={`url(#${effectId})`} /><circle r={144 / map.scale} fill="none" stroke="#101c29" strokeOpacity=".9" strokeWidth="7" /><circle r={144 / map.scale} fill="none" stroke={ownerColor || "#f4fbff"} strokeOpacity={ownerColor ? ".7" : ".5"} strokeWidth="3" /></g> : <><g className="ov-flying-grenade" transform={`translate(${-size * .8},${-size * .8}) scale(${size * 1.6 / 24})`} style={{ color: /molotov|incendiary/.test(grenade.type) ? '#ffb66b' : '#fff' }}><EquipmentIcon className="ov-radar-glyph" kind={grenadeKind(grenade.type)} /></g></>}</RadarMotion>;
 }
 
 function FirePatch({ x, y, size, animate }: { x: number; y: number; size: number; animate: boolean }) {
   const [missing, setMissing] = useState(false);
   const animated = animate && !missing;
   return <image className="ov-fire-patch" href={`/assets/icons/effects/${animated ? 'fire.gif' : 'fire.svg'}`} x={x - size / 2} y={y - size / 2} width={size} height={size} preserveAspectRatio="xMidYMid meet" onError={animated ? () => setMissing(true) : undefined} />;
+}
+
+function GrenadeBurst({ type, size, animate }: { type: string; size: number; animate: boolean }) {
+  const flash = type.includes('flash');
+  const [missing, setMissing] = useState(false);
+  if (flash && (!animate || missing)) return <path className="ov-flash-burst" d="M0-2 0 2M-2 0 2 0M-1.4-1.4 1.4 1.4M1.4-1.4-1.4 1.4" transform={`scale(${size})`} stroke="#fffbe3" strokeWidth=".3" />;
+  return <image className={flash ? 'ov-flash-burst' : 'ov-he-burst'} href={flash ? '/assets/icons/effects/flash.gif' : '/assets/icons/effects/he-burst.svg'} x={-size*2} y={-size*2} width={size*4} height={size*4} onError={flash ? () => setMissing(true) : undefined} />;
+}
+
+function RadarBomb({ state, map, layer, size, animate }: { state: GameState; map: RadarMap; layer: string; size: number; animate: boolean }) {
+  const now = useServerClock(state);
+  const previous = useRef<{ context: string; bomb: GameState['bomb'] } | null>(null);
+  const [explosion, setExplosion] = useState<GameState['bomb']['position']>(null);
+  useEffect(() => {
+    const context = `${state.mode}:${state.map}:${state.round}`;
+    const old = previous.current?.context === context ? previous.current.bomb : null;
+    if (previous.current?.context !== context) setExplosion(null);
+    if (state.connected && state.bomb.state === 'exploded' && old?.state !== 'exploded')
+      setExplosion(state.bomb.position ?? (old && ['planted', 'defusing'].includes(old.state) ? old.position : null));
+    previous.current = { context, bomb: state.bomb };
+  }, [state.revision, state.map, state.round, state.mode, state.connected]);
+  useEffect(() => { if (!explosion) return; const handle = window.setTimeout(() => setExplosion(null), 950); return () => clearTimeout(handle); }, [explosion]);
+  const position = state.bomb.position;
+  const visible = position && ['dropped', 'planted', 'defusing'].includes(state.bomb.state) && selectRadarLayer(position, map) === layer;
+  const point = visible ? worldToRadar(position, map) : null;
+  const blast = explosion && selectRadarLayer(explosion, map) === layer ? worldToRadar(explosion, map) : null;
+  const planted = ['planted', 'defusing'].includes(state.bomb.state);
+  const seconds = projected(state.bomb.timer, state, now);
+  const pulse = animate && state.connected && state.bomb.timer.running && !state.pause.active;
+  return <>
+    {point && <g transform={`translate(${point.x},${point.y})`}><title>{`C4 · ${state.bomb.state}`}</title>
+      {planted && pulse && <circle className="ov-planted-pulse" r={size*2.3} fill="#ff273e" fillOpacity=".22" stroke="#ff3b4d" strokeOpacity=".45" strokeWidth={size*.1} style={{animationDuration:`${bombPulsePeriod(seconds)}s`}} />}
+      <image className="ov-map-bomb" href="/assets/icons/effects/map_bomb.svg" x={-size} y={-size} width={size*2} height={size*2} />
+    </g>}
+    {blast && <g transform={`translate(${blast.x},${blast.y})`}><image className="ov-bomb-explosion" href="/assets/icons/effects/he-burst.svg" x={-size*5} y={-size*5} width={size*10} height={size*10} /></g>}
+  </>;
 }

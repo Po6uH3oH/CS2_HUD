@@ -3,8 +3,23 @@ import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { defaultSettings, GsiNormalizer } from '../packages/core/index.js';
-import { grenadePhase } from '../packages/core/grenade-presentation.js';
+import { grenadePhase, grenadeBursts, bombPulsePeriod } from '../packages/core/grenade-presentation.js';
 import { Overlay } from '../apps/web/src/overlay/Overlay.js';
+
+test('flash and HE detonation events fire once for disappearance, effects and expired remnants', () => {
+  const g = { id: 'flash', type: 'flashbang', position: { x: 0, y: 0, z: -400 }, velocity: null, effectTime: null, lifetime: 1, flames: [] };
+  const burst = { ...g, effectTime: .1 }, expired = { ...g, effectTime: 1 };
+  assert.equal(grenadeBursts([g], []).length, 1);
+  assert.equal(grenadeBursts([g], [burst]).length, 1);
+  assert.equal(grenadeBursts([burst], [burst]).length, 0);
+  assert.equal(grenadeBursts([burst], []).length, 0);
+  assert.equal(grenadeBursts([g], [expired]).length, 1);
+  assert.equal(grenadeBursts([expired], []).length, 0);
+  assert.equal(grenadeBursts([{ ...g, type: 'smoke' }], []).length, 0);
+  assert.ok(bombPulsePeriod(4) < bombPulsePeriod(9));
+  assert.ok(bombPulsePeriod(9) < bombPulsePeriod(19));
+  assert.ok(bombPulsePeriod(19) < bombPulsePeriod(30));
+});
 
 test('smoke zero effecttime is flight; positive time deploys and reused IDs lose old effects', () => {
   const n = new GsiNormalizer();

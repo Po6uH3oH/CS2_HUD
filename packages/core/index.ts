@@ -196,9 +196,21 @@ export class GsiNormalizer {
     if (phaseName === 'paused') roundTimer = timer(remaining(prev.roundTimer, now), prev.roundTimer.duration, prev.roundTimer.source, now, false);
 
     const allowedBomb = ['carried', 'dropped', 'planting', 'planted', 'defusing', 'defused', 'exploded'];
-    const stateName = string(bomb.state, string(round.bomb));
-    const bombState: BombState['state'] = allowedBomb.includes(stateName) ? stateName as BombState['state'] : 'unknown';
     const incomingBomb = object(patch.bomb), freshBomb = has(incomingBomb, 'countdown');
+    // A partial bomb update may keep "dropped" after pickup. A newly acquired C4
+    // in a fresh inventory is stronger evidence than that cached state.
+    const freshCarrier = players.find(p => p.health !== 0 && p.weapons.some(w => w.name === 'weapon_c4') &&
+      has(object(object(patch.allplayers)[p.steamId]), 'weapons')) ??
+      players.find(p => p.steamId === string(object(patch.player).steamid) && p.health !== 0 && has(object(patch.player), 'weapons') && p.weapons.some(w => w.name === 'weapon_c4'));
+    const roundBomb = string(object(patch.round).bomb);
+    let stateName = !has(incomingBomb, 'state') && allowedBomb.includes(roundBomb) ? roundBomb : string(bomb.state, string(round.bomb));
+    if (!has(incomingBomb, 'state') && allowedBomb.includes(roundBomb)) { bomb.state = roundBomb; raw.bomb = bomb; }
+    if (freshCarrier && ['unknown', '', 'dropped', 'carried'].includes(stateName)) {
+      stateName = 'carried'; bomb.state = stateName; bomb.player = freshCarrier.steamId;
+      delete bomb.position; raw.bomb = bomb;
+    }
+    const bombState: BombState['state'] = allowedBomb.includes(stateName) ? stateName as BombState['state'] : 'unknown';
+    if (has(incomingBomb, 'state') && incomingBomb.state !== prev.bomb.state && !has(incomingBomb, 'player') && !['carried', 'planting'].includes(bombState)) delete bomb.player;
     let bombTimer = clone(prev.bomb.timer), defuseTimer = clone(prev.bomb.defuseTimer);
     if (!['planted', 'defusing'].includes(bombState)) { bombTimer = timer(null, null, 'unknown', now); defuseTimer = timer(null, null, 'unknown', now); }
     else {
@@ -217,8 +229,12 @@ export class GsiNormalizer {
         }
       } else defuseTimer = timer(null, null, 'unknown', now);
     }
-    const playerId = string(bomb.player) || null;
-    const normalizedBomb: BombState = { state: bombState, position: parseVector(bomb.position), playerId, timer: bombTimer, defuseTimer, defuserHasKit: bombState === 'defusing' ? players.find(p => p.steamId === playerId)?.defuseKit ?? null : null };
+    const playerId = bombState === 'defusing' ? string(bomb.player) || null : ['carried', 'planting'].includes(bombState) ? string(bomb.player) || players.find(p => p.hasBomb)?.steamId || null : null;
+    for (const player of players) {
+      if (['dropped', 'planted', 'defusing', 'defused', 'exploded'].includes(bombState)) player.hasBomb = false;
+      else if (playerId) player.hasBomb = player.steamId === playerId && player.health !== 0;
+    }
+    const normalizedBomb: BombState = { state: bombState, position: bombState === 'carried' ? null : parseVector(bomb.position), playerId, timer: bombTimer, defuseTimer, defuserHasKit: bombState === 'defusing' ? players.find(p => p.steamId === playerId)?.defuseKit ?? null : null };
     const isPause = ['paused', 'timeout_ct', 'timeout_t'].includes(phaseName);
     if (isPause) {
       const freeze = (value: Timer) => ({ ...value, remaining: remaining(value, now), updatedAt: now, running: false });

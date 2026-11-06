@@ -99,3 +99,13 @@
 
 .ov-compact-name,.ov-compact-stats,.ov-compact-hp,.ov-compact-money{color:#fff;text-shadow:0 1px 3px #101820,0 0 2px #101820}
 .ov-compact-weapon,.ov-compact .ov-icon{filter:drop-shadow(0 1px 1px #101820)}
+
+/* Keep K/D reading order on CT; raise fixed inventory slots without shifting other rows. */
+.ov-roster-right .ov-compact-stats .ov-kd{flex-direction:row}
+.ov-compact-utility,.ov-compact-badges{translate:0 -3px}
+.ov-flying-grenade,.ov-map-bomb{filter:drop-shadow(0 1px 1px #111923)}
+.ov-planted-pulse{transform-box:fill-box;transform-origin:center;animation:ov-c4-pulse 1.2s ease-out infinite}
+@keyframes ov-c4-pulse{from{scale:.35;opacity:.85}to{scale:1.2;opacity:0}}
+.ov-bomb-explosion{transform-box:fill-box;transform-origin:center;animation:ov-burst .95s ease-out forwards}
+.ov-flash-burst{transform-box:fill-box;transform-origin:center;animation:ov-flash-fade .7s linear forwards}
+@keyframes ov-flash-fade{0%,65%{opacity:1}100%{opacity:0}}

@@ -14,3 +14,19 @@ export function grenadePhase(g: Grenade): 'flight' | 'smoke' | 'fire' | 'burst' 
   }
   return 'flight';
 }
+
+/** Emit one event on detonation/removal, never repeatedly for retained remnants. */
+export function grenadeBursts(previous: Grenade[], current: Grenade[]): Grenade[] {
+  const old = new Map(previous.map(g => [g.id, g]));
+  const next = new Map(current.map(g => [g.id, g]));
+  return [
+    ...current.filter(g => /flash|frag|hegrenade/.test(g.type) && grenadePhase(g) === 'burst' &&
+      (!old.has(g.id) || grenadePhase(old.get(g.id)!) === 'flight')),
+    ...previous.filter(g => /flash|frag|hegrenade/.test(g.type) && grenadePhase(g) === 'flight' &&
+      (!next.has(g.id) || grenadePhase(next.get(g.id)!) === 'expired')),
+  ];
+}
+
+export function bombPulsePeriod(seconds: number | null): number {
+  return seconds == null || seconds > 20 ? 1.2 : seconds > 10 ? .8 : seconds > 5 ? .5 : .25;
+}

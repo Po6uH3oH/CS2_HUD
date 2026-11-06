@@ -15,6 +15,35 @@ test('empty live state has no fabricated players, bomb countdown or capabilities
   const state = createInitialState(settings(), 'live', 1000);
   assert.equal(state.connected, false); assert.equal(state.players.length, 0); assert.equal(state.bomb.timer.remaining, null); assert.deepEqual(state.capabilities, []);
 });
+
+test('C4 pickup reconciles stale dropped telemetry, survives partial packets and disappears from inventory on plant', () => {
+  const n = new GsiNormalizer(), config = settings();
+  const c4 = { weapon_0: { name: 'weapon_c4', type: 'C4', state: 'holstered' } };
+  const player = (inventory: object) => ({ team: 'T', state: { health: 100 }, position: '0,0,-400', weapons: inventory });
+  n.ingest({ map: { name: 'de_nuke', round: 1 }, bomb: { state: 'carried', player: 'alice' }, allplayers: { alice: player(c4), bob: player({}) } }, config, 1000);
+  let s = n.ingest({ bomb: { state: 'dropped', position: '20,30,-400' }, allplayers: { alice: player({}), bob: player({}) } }, config, 1100).state;
+  assert.equal(s.bomb.state, 'dropped'); assert.equal(s.bomb.playerId, null);
+  assert.equal(s.players.some(p => p.hasBomb), false);
+  s = n.ingest({ allplayers: { alice: player({}), bob: player(c4) } }, config, 1200).state;
+  assert.equal(s.bomb.state, 'carried'); assert.equal(s.bomb.playerId, 'bob'); assert.equal(s.bomb.position, null);
+  assert.deepEqual(s.players.filter(p => p.hasBomb).map(p => p.steamId), ['bob']);
+  s = n.ingest({ bomb: { state: 'dropped', position: '100,30,-400' }, allplayers: { alice: player({}), bob: player(c4) } }, config, 1300).state;
+  assert.equal(s.bomb.state, 'carried');
+  s = n.ingest({ bomb: { position: '150,30,-400' } }, config, 1400).state;
+  assert.equal(s.bomb.state, 'carried'); assert.equal(s.bomb.position, null);
+  s = n.ingest({ bomb: { state: 'planted', position: '200,30,-400', countdown: '39' } }, config, 1500).state;
+  assert.equal(s.bomb.state, 'planted'); assert.equal(s.players.some(p => p.hasBomb), false);
+  s = n.ingest({ round: { bomb: 'exploded' } }, config, 1600).state;
+  assert.equal(s.bomb.state, 'exploded');
+  assert.equal(n.ingest({ round: { phase: 'over' } }, config, 1700).state.bomb.state, 'exploded');
+});
+
+test('cached inventory cannot override a fresh C4 drop without an inventory update', () => {
+  const n = new GsiNormalizer(), config = settings();
+  n.ingest({ allplayers: { alice: { team: 'T', state: { health: 100 }, weapons: { w: { name: 'weapon_c4' } } } }, bomb: { state: 'carried', player: 'alice' } }, config, 1000);
+  const s = n.ingest({ bomb: { state: 'dropped', position: '30,40,-400' } }, config, 1100).state;
+  assert.equal(s.bomb.state, 'dropped'); assert.equal(s.players[0].hasBomb, false);
+});
 test('partial snapshots retain scalars and only replace explicitly present collections', () => {
   const normalizer = new GsiNormalizer(), config = settings();
   normalizer.ingest(fixture(), config, 1000);
