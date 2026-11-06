@@ -56,24 +56,44 @@
 .ov-player.ov-dead{width:400px}.ov-dead .ov-round-damage{flex-shrink:0;gap:5px;font-size:23px}.ov-dead .ov-round-damage small{display:none}.ov-dead .ov-round-damage>.ov-icon{width:24px;height:24px}
 .ov-dead .ov-player-bottom{justify-content:space-between}.ov-economy{padding:18px}.ov-economy-grenades{gap:11px}
 
-/* Compact three-row broadcast cards, November 2026. */
-.ov-roster{width:430px;bottom:18px;gap:22px}.ov-roster-left{left:18px}.ov-roster-right{right:18px}
-.ov-player.ov-compact{height:104px;width:430px;display:grid;grid-template-columns:220px 112px 1fr;grid-template-rows:34px 32px 36px;padding:0 10px;isolation:isolate;background:#101923e8;gap:0;border:1px solid #ffffff30;overflow:visible}
-.ov-compact>.ov-health-fill{z-index:-1;opacity:.78}.ov-compact>.ov-health-trail{z-index:-1;background:color-mix(in srgb,var(--team) 35%,#101820);opacity:1}.ov-compact>.ov-flash-fill{z-index:0;pointer-events:none}
-.ov-compact>div,.ov-compact>strong{position:relative;z-index:1}.ov-compact-name{grid-area:1/1;display:flex;align-items:center;gap:7px;min-width:0;color:color-mix(in srgb,white,#14202c var(--flash-percent))}.ov-compact-name strong{font-size:24px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ov-compact-name small{font-size:17px;font-weight:800;opacity:.75}
-.ov-compact-stats{grid-area:2/1;align-self:center}.ov-compact .ov-kda{font-size:21px;gap:5px}.ov-compact-money{grid-area:3/1;align-self:center;font-size:22px;font-weight:800}
-.ov-compact-weapon{grid-area:1/2/3/3;display:flex;align-items:center;justify-content:center}.ov-compact-weapon .ov-weapon{width:112px;height:60px}.ov-compact-hp{grid-area:1/3/3/4;align-self:center;justify-self:end;font-size:40px;line-height:1;font-weight:900}
-.ov-compact-utility{grid-area:3/1/4/3;justify-self:end;display:flex;align-items:center;gap:5px}.ov-compact-utility>span{display:flex;position:relative}.ov-compact-utility .ov-icon{width:23px;height:26px}.ov-compact-utility b{font-size:12px;position:absolute;right:-3px;bottom:0;background:#18212b}
-.ov-compact-kit{grid-area:3/3;align-self:center;justify-self:start}.ov-compact-armor{grid-area:3/3;align-self:center;justify-self:end}.ov-compact-kit .ov-icon,.ov-compact-armor .ov-icon{width:24px;height:27px}
-.ov-kill-stars{position:absolute;top:-22px;left:10px;height:22px;line-height:22px;color:#fff4be;letter-spacing:4px;font-size:22px;text-shadow:0 2px 4px #000}.ov-roster-right .ov-kill-stars{left:auto;right:10px}
-.ov-player.ov-compact.ov-dead{width:295px;grid-template-columns:220px 1fr;opacity:.63;background:#101923a8}.ov-compact-death{grid-area:1/2/4/3;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;font-size:20px;font-weight:800}.ov-compact-death .ov-icon{width:29px;height:29px}.ov-compact-death small{font-size:11px}
+/* Three-row cards: outer observer strip, four grenade slots, fixed equipment corner. */
+.ov-roster{width:430px;bottom:18px;gap:22px;filter:none}.ov-roster-left{left:18px}.ov-roster-right{right:18px}
+.ov-player.ov-compact{height:104px;width:430px;display:grid;grid-template-columns:minmax(0,1fr) 120px 76px;grid-template-rows:34px 32px 36px;padding:0 8px 0 26px;isolation:isolate;background:#10192366;gap:0;border:1px solid #ffffff30;overflow:visible}
+.ov-compact>.ov-health-fill{z-index:-1;background:color-mix(in srgb,var(--team) 60%,#101820);opacity:.65}
+.ov-compact>.ov-health-trail{z-index:-1;background:color-mix(in srgb,var(--team) 28%,#101820);opacity:.65}
+.ov-compact>.ov-flash-fill{z-index:0;pointer-events:none}
+.ov-compact>div,.ov-compact>strong{position:relative;z-index:1}
+.ov-observer-slot{position:absolute;inset:0 auto 0 0;width:18px;background:var(--team);color:#fff;font-size:18px;font-weight:800;line-height:26px;text-align:center;z-index:2}
+.ov-compact-name{grid-area:1/1;display:flex;align-items:center;min-width:0}.ov-compact-name strong{font-size:24px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ov-compact-stats{grid-area:2/1;align-self:center}.ov-compact-money{grid-area:3/1;align-self:center;font-size:22px;font-weight:800}
+.ov-compact-weapon{grid-area:1/2/3/3;display:flex;align-items:center;justify-content:center}.ov-compact-weapon .ov-weapon{width:118px;height:60px}
+.ov-compact-hp{grid-area:1/3/3/4;align-self:center;justify-self:end;font-size:40px;line-height:1;font-weight:900}
+.ov-compact-utility{grid-area:3/2;align-self:center;display:grid;grid-template-columns:repeat(4,25px);gap:5px;width:115px;height:28px}
+.ov-compact-utility>span{display:flex;align-items:center;justify-content:center;width:25px;height:28px}.ov-compact-utility .ov-icon{width:25px;height:28px}
+.ov-compact-badges{grid-area:3/3;align-self:center;display:grid;grid-template-columns:32px 32px;justify-content:end;gap:6px;height:30px}
+.ov-compact-kit,.ov-compact-armor{display:flex;align-items:center;justify-content:center;position:relative;min-width:0}
+.ov-compact-kit .ov-icon,.ov-compact-armor .ov-icon{width:28px;height:30px}.ov-compact .ov-armor-low small{position:absolute;right:0;bottom:-5px;font-size:12px;line-height:12px}
+.ov-kill-stars{position:absolute;top:-22px;left:26px;height:22px;line-height:22px;color:#fff;letter-spacing:4px;font-size:22px;text-shadow:none;filter:none;-webkit-text-stroke:0;z-index:3}
+.ov-player.ov-compact.ov-dead{width:295px;grid-template-columns:minmax(0,1fr) 68px;opacity:1;background:#10192366;filter:none}
+.ov-dead .ov-observer-slot{background:#78818a80}.ov-dead .ov-compact-name,.ov-dead .ov-compact-stats,.ov-dead .ov-compact-money,.ov-dead .ov-compact-death{opacity:.7}
+.ov-compact-death{grid-area:1/2/4/3;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:5px;font-size:20px;font-weight:800}.ov-compact-death .ov-icon{width:29px;height:29px}.ov-compact-death small{font-size:11px}
+/* The CT roster mirrors layout and weapon direction, never the text itself. */
+.ov-roster-right .ov-player.ov-compact{padding:0 26px 0 8px;grid-template-columns:76px 120px minmax(0,1fr)}
+.ov-roster-right .ov-observer-slot{left:auto;right:0}.ov-roster-right .ov-kill-stars{left:auto;right:26px}
+.ov-roster-right .ov-compact-name{grid-area:1/3;justify-content:flex-end}.ov-roster-right .ov-compact-stats{grid-area:2/3;justify-self:end}.ov-roster-right .ov-compact-money{grid-area:3/3;justify-self:end}
+.ov-roster-right .ov-compact-stats .ov-kd,.ov-roster-right .ov-compact-stats .ov-kd>span{flex-direction:row-reverse}
+.ov-roster-right .ov-compact-weapon .ov-weapon{transform:scaleX(-1)}.ov-roster-right .ov-compact-hp{grid-area:1/1/3/2;justify-self:start}
+.ov-roster-right .ov-compact-utility{direction:rtl;justify-self:end}.ov-roster-right .ov-compact-badges{grid-area:3/1;direction:rtl}
+.ov-roster-right .ov-compact-armor .ov-armor{direction:ltr}.ov-roster-right .ov-compact .ov-armor-low small{right:auto;left:0}
+.ov-roster-right .ov-player.ov-compact.ov-dead{grid-template-columns:68px minmax(0,1fr)}
+.ov-roster-right .ov-dead .ov-compact-name{grid-area:1/2}.ov-roster-right .ov-dead .ov-compact-stats{grid-area:2/2}.ov-roster-right .ov-dead .ov-compact-money{grid-area:3/2}.ov-roster-right .ov-compact-death{grid-area:1/1/4/2}
 .ov-observed-card{left:990px;width:580px;bottom:18px;height:94px;padding:10px 16px;gap:18px}.ov-observed-identity{min-width:0;flex:1}.ov-observed-identity>strong{font-size:26px}.ov-observed-equipment{gap:5px}.ov-observed-equipment .ov-weapon{width:100px;height:35px}.ov-observed-equipment strong{font-size:25px}.ov-observed-equipment>div{gap:9px}.ov-observed-equipment>span{gap:10px}
 .ov-scoreboard{top:18px}.ov-alive{top:18px;height:100px;box-sizing:border-box}.ov-timeouts{top:18px;left:18px;display:flex;align-items:center;height:100px}.ov-timeouts h3{width:105px;padding:10px;font-size:13px;border:0}.ov-timeouts>div{flex:1}.ov-timeouts>div>span{padding:10px;justify-content:center;border-bottom:0}.ov-timeouts strong{font-size:36px}.ov-timeouts .ov-team-mark{width:40px;height:40px}
 .ov-economy{width:430px;bottom:660px}.ov-economy-left{left:18px}.ov-economy-right{right:18px}.ov-economy small{font-size:15px}.ov-economy-numbers>div>strong{font-size:29px}.ov-economy-grenades{gap:8px}.ov-economy-grenades>span{font-size:20px}
 
 .ov-alive,.ov-timeouts{height:116px}.ov-compact .ov-kd{font-size:21px;gap:10px}.ov-compact .ov-kd b{font-size:21px}.ov-compact .ov-kd .ov-icon{width:20px;height:20px}.ov-observed-identity .ov-kd,.ov-observed-identity .ov-kd b{font-size:22px}.ov-observed-identity .ov-kd{gap:15px}.ov-observed-equipment>span>strong,.ov-observed-equipment>div strong{font-size:25px}
 
-.ov-kill-stars{z-index:3;filter:drop-shadow(0 1px 2px #000);-webkit-text-stroke:.5px #27303a}
+
 .ov-compact-stats,.ov-compact-hp,.ov-compact-money{color:color-mix(in srgb,white,#14202c var(--flash-percent))}
 .ov-compact-stats .ov-kd{color:inherit}
 

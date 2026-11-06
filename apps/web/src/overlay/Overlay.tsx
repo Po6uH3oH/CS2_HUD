@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useId, type CSSProperties, type ReactNode 
 import type { GameState, Grenade, HudSettings, Player, RadarMap, Settings, TeamState, Timer } from '../../../../packages/shared/types';
 import { economy, observerOrder, presentationState, remaining, selectRadarLayer, worldToRadar } from '../../../../packages/core';
 import { grenadePhase } from '../../../../packages/core/grenade-presentation';
+import { primaryWeapon, weaponFill } from '../../../../packages/core/player-loadout';
 import { useRadarFocus } from './useRadarFocus';
 import { RadarTrack } from '../../../../packages/core/radar-motion';
 import { EquipmentIcon, TeamMark, WeaponIcon, grenadeKind, isGrenade, itemName } from './icons';
@@ -134,18 +135,20 @@ function HealthFill({ health, flash }: { health: number | null; flash: number })
 }
 
 function PlayerCard({ player, observed }: { player: Player; observed: boolean; pause: boolean }) {
-  const primary = player.weapons.find(w => w.state === 'active' && !isGrenade(w.name) && !/c4/.test(w.name)) || player.weapons.find(w => !isGrenade(w.name) && !/knife|bayonet|c4/.test(w.name) && w.type !== 'Pistol') || player.weapons.find(w => w.type === 'Pistol');
+  const primary = primaryWeapon(player.weapons);
+  const grenades = player.weapons.filter(w => isGrenade(w.name)).flatMap(w => Array.from({ length: Math.min(4, Math.max(0, Math.floor(w.count))) }, () => w)).slice(0, 4);
   const flash = player.alive ? Math.min(1, Math.max(0, (player.flashed ?? 0) / 255)) : 0;
   const dead = player.health === 0;
   return <article className={`ov-player ov-compact ${dead ? 'ov-dead' : ''} ${observed ? 'ov-observed' : ''}`} style={{ '--flash-percent': `${flash * 100}%` } as Vars}>
     <HealthFill health={player.health} flash={flash} />
+    <span className="ov-observer-slot">{player.slot ?? '—'}</span>
     <span className="ov-kill-stars" title={`Убийств за раунд: ${player.roundKills ?? 0}`}>{'★'.repeat(Math.min(5, player.roundKills ?? 0))}</span>
-    <div className="ov-compact-name" title={player.name}><small>{player.slot ?? '—'}</small><strong>{player.name.length > 12 ? player.name.slice(0,12) + '…' : player.name}</strong></div>
+    <div className="ov-compact-name" title={player.name}><strong>{player.name.length > 12 ? player.name.slice(0,12) + '…' : player.name}</strong></div>
     <div className="ov-compact-stats"><PlayerStats player={player} /></div>
     <div className="ov-compact-money">{money(player.money)}</div>
-    {!dead && <><div className="ov-compact-weapon">{primary && <WeaponIcon name={primary.name} ammoRatio={primary.ammoClip != null && primary.ammoClipMax ? primary.ammoClip / primary.ammoClipMax : null} />}</div><strong className="ov-compact-hp">{val(player.health)}</strong>
-    <div className="ov-compact-utility">{player.weapons.filter(w => isGrenade(w.name)).map(w => <span key={w.name}><EquipmentIcon kind={grenadeKind(w.name)} />{w.count > 1 && <b>{w.count}</b>}</span>)}</div>
-    <div className="ov-compact-kit">{player.side === 'CT' && player.defuseKit && <EquipmentIcon kind="kit" />}{player.hasBomb && <EquipmentIcon kind="bomb" />}</div><div className="ov-compact-armor"><ArmorIndicator player={player} /></div></>}
+    {!dead && <><div className="ov-compact-weapon">{primary && <WeaponIcon name={primary.name} ammoRatio={weaponFill(primary)} />}</div><strong className="ov-compact-hp">{val(player.health)}</strong>
+    <div className="ov-compact-utility">{Array.from({ length: 4 }, (_, i) => <span key={i}>{grenades[i] && <EquipmentIcon kind={grenadeKind(grenades[i].name)} />}</span>)}</div>
+    <div className="ov-compact-badges"><span className="ov-compact-kit">{player.side === 'CT' && player.defuseKit && <EquipmentIcon kind="kit" />}{player.hasBomb && <EquipmentIcon kind="bomb" />}</span><span className="ov-compact-armor"><ArmorIndicator player={player} /></span></div></>}
     {dead && <div className="ov-compact-death" title="Урон за текущий раунд"><EquipmentIcon kind="skull" /><span>{val(player.roundDamage)} <small>DPR</small></span></div>}
   </article>;
 }
@@ -295,6 +298,12 @@ function RadarGrenade({ grenade, map, layer, size, animate, sampleAt }: { sample
   const smoke = phase === 'smoke';
   if (phase === 'expired') return null;
   if (phase === 'burst') return <g transform={`translate(${point.x},${point.y})`} className="ov-grenade-burst"><circle r={size * 1.8} fill={grenade.type.includes('flash') ? '#fff9d7' : '#ffab58'} fillOpacity=".5" /><circle r={size * 2.2} fill="none" stroke="#fff2bf" strokeWidth="3" /></g>;
-  if (phase === 'fire') return <g className="ov-radar-fire"><title>Огонь</title>{grenade.flames.filter(p => selectRadarLayer(p, map) === layer).map((p, i) => { const pos = worldToRadar(p, map); return <circle key={i} cx={pos.x} cy={pos.y} r={72 / map.scale} fill="#ff741f" fillOpacity=".85" stroke="#fff0a3" strokeWidth="3" />; })}</g>;
+  if (phase === 'fire') return <g className="ov-radar-fire"><title>Огонь</title>{grenade.flames.filter(p => selectRadarLayer(p, map) === layer).map((p, i) => { const pos = worldToRadar(p, map); return <FirePatch key={i} x={pos.x} y={pos.y} size={144 / map.scale} animate={animate} />; })}</g>;
   return <RadarMotion x={point.x} y={point.y} sampleAt={sampleAt} animate={animate && !smoke}><title>{smoke ? 'Раскрытый дым' : `Граната: ${grenade.type}`}</title>{smoke ? <g className="ov-smoke-area"><defs><radialGradient id={effectId}><stop offset="0" stopColor="#d4e0e6" stopOpacity=".9" /><stop offset=".65" stopColor="#c3d2db" stopOpacity=".75" /><stop offset="1" stopColor="#bbcbd5" stopOpacity=".15" /></radialGradient></defs><circle r={160 / map.scale} fill={`url(#${effectId})`} /><circle r={144 / map.scale} fill="none" stroke="#101c29" strokeOpacity=".9" strokeWidth="7" /><circle r={144 / map.scale} fill="none" stroke="#f4fbff" strokeOpacity=".95" strokeWidth="3" /></g> : <><circle r={size * 1.05} fill="#13202eed" stroke="#e1ebf6" strokeWidth="2" /><g transform={`translate(${-size * .8},${-size * .8}) scale(${size * 1.6 / 24})`} style={{ color: /molotov|incendiary/.test(grenade.type) ? '#ffb66b' : '#fff' }}><EquipmentIcon className="ov-radar-glyph" kind={grenadeKind(grenade.type)} /></g></>}</RadarMotion>;
+}
+
+function FirePatch({ x, y, size, animate }: { x: number; y: number; size: number; animate: boolean }) {
+  const [missing, setMissing] = useState(false);
+  const animated = animate && !missing;
+  return <image className="ov-fire-patch" href={`/assets/icons/effects/${animated ? 'fire.gif' : 'fire.svg'}`} x={x - size / 2} y={y - size / 2} width={size} height={size} preserveAspectRatio="xMidYMid meet" onError={animated ? () => setMissing(true) : undefined} />;
 }

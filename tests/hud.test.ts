@@ -22,7 +22,7 @@ test('observer keys match 1–9,0 in normalized players, roster and radar', () =
   const state = new GsiNormalizer().ingest({ map: { name: 'de_nuke' }, allplayers }, settings(), 1000).state;
   assert.deepEqual(state.players.map(p => p.slot), [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
   const html = render(state);
-  assert.deepEqual([...html.matchAll(/ov-compact-name[\s\S]*?<small>(\d)<\/small>/g)].map(m => Number(m[1])), [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
+  assert.deepEqual([...html.matchAll(/class="ov-observer-slot">(\d)<\/span>/g)].map(m => Number(m[1])), [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
   assert.deepEqual([...html.matchAll(/<text[^>]*>(\d)<\/text>/g)].map(m => Number(m[1])), [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]);
   for (const value of [undefined, null, '', -1, 10, 2.5, 'invalid']) assert.equal(observerKey(value), null);
   assert.equal(observerKey('0'), 1);
