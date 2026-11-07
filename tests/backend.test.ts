@@ -44,6 +44,7 @@ test('GSI selects an unlisted map, awards its winner once and persists the resul
     finish.map = { ...finish.map, name: 'de_cache', phase: 'gameover', team_t: { score: 13 }, team_ct: { score: 8 } };
     await h.request('/api/gsi', finish);
     assert.deepEqual(h.snapshot().settings.match.seriesScore, [1, 0]);
+    assert.deepEqual(h.snapshot().settings.match.mapDetails.de_cache.scores, { navi: 13, fnatic: 8 });
     finish.provider.timestamp++;
     await h.request('/api/gsi', finish);
     assert.deepEqual(h.snapshot().settings.match.seriesScore, [1, 0]);
@@ -58,6 +59,7 @@ test('GSI selects an unlisted map, awards its winner once and persists the resul
       });
       assert.equal(response.status, 200);
       assert.deepEqual(reopened.snapshot().settings.match.seriesScore, [1, 0]);
+      assert.deepEqual(reopened.snapshot().settings.match.mapDetails.de_cache.scores, { navi: 13, fnatic: 8 });
     } finally { await reopened.close(); }
   } finally { await h.dispose(); }
 });

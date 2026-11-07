@@ -17,7 +17,7 @@ export interface Economy { money: number | null; equipmentValue: number | null; 
 export type PauseKind = 'tactical' | 'technical' | 'admin' | 'paused' | 'resuming';
 export interface PauseState { active: boolean; kind: PauseKind; teamId: string | null; timer: Timer; source: Source }
 export interface BombState { state: 'unknown' | 'carried' | 'dropped' | 'planting' | 'planted' | 'defusing' | 'defused' | 'exploded'; position: Vec3 | null; playerId: string | null; timer: Timer; defuseTimer: Timer; defuserHasKit: boolean | null }
-export interface Grenade { id: string; type: string; position: Vec3; owner?: string; velocity: Vec3 | null; effectTime: number | null; lifetime: number | null; flames: Vec3[] }
+export interface Grenade { id: string; type: string; position: Vec3; owner?: string; ownerTeamId?: string; ownerSide?: Side; velocity: Vec3 | null; effectTime: number | null; lifetime: number | null; flames: Vec3[] }
 export interface RoundResult { round: number; teamId: string; side: Side; method: string }
 export interface GameState {
   broadcastAt?: number;
@@ -29,8 +29,9 @@ export interface GameState {
 export interface RadarRegion { name: string; polygon: [number, number][]; minZ: number; maxZ: number; layer: string }
 export interface RadarLayer { id: string; name: string; image: string; minZ: number; maxZ: number }
 export interface RadarMap { id: string; name: string; originX: number; originY: number; scale: number; rotation: number; size: number; calibrated: boolean; viewBounds?: { x: number; y: number; width: number; height: number }; layers: RadarLayer[]; regions: RadarRegion[]; sites: { label: string; x: number; y: number; layer: string }[] }
-export interface HudSettings { scale: number; opacity: number; showRadar: boolean; showPlayers: boolean; showObserved: boolean; showHistory: boolean; animate: boolean; radarSize: number; radarX: number; radarY: number; radarOpacity: number; radarLayer: 'auto' | 'both' | string; showGrenades: boolean; timerStyle: 'bar' | 'compact'; sideColors: Record<Side, string> }
-export interface MatchConfig { id: string; name: string; map: string; bestOf: 1 | 3 | 5; seriesScore: [number, number]; maps: string[]; faceitMatchId: string; scoreOverride: [number, number] | null; timeouts: [number | null, number | null]; lossBonus: [number | null, number | null] }
+export interface HudSettings { scale: number; opacity: number; showRadar: boolean; showAliveCount: boolean; showMapOrder: boolean; showPlayers: boolean; showObserved: boolean; showHistory: boolean; animate: boolean; radarSize: number; radarX: number; radarY: number; radarOpacity: number; radarLayer: 'auto' | 'both' | string; showGrenades: boolean; timerStyle: 'bar' | 'compact'; sideColors: Record<Side, string> }
+export interface MapDetail { pickTeamId: string | null; decider: boolean; scores: Record<string, number> }
+export interface MatchConfig { id: string; name: string; map: string; bestOf: 1 | 3 | 5; seriesScore: [number, number]; maps: string[]; mapDetails: Record<string, MapDetail>; faceitMatchId: string; scoreOverride: [number, number] | null; timeouts: [number | null, number | null]; lossBonus: [number | null, number | null] }
 export interface Tournament { id: string; name: string; tag: string; logo: string; date: string; format: string; description: string; faceitHubId: string }
 export interface Settings { teams: [TeamConfig, TeamConfig]; match: MatchConfig; tournament: Tournament; hud: HudSettings; radarMaps: RadarMap[]; bombDuration: number; defuseWithKit: number; defuseWithoutKit: number; staleAfterMs: number; autoPause: boolean }
 export interface IntegrationStatus { configured: boolean; connected: boolean; message: string; lastSync: number | null }

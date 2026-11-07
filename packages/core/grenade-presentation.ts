@@ -30,3 +30,15 @@ export function grenadeBursts(previous: Grenade[], current: Grenade[]): Grenade[
 export function bombPulsePeriod(seconds: number | null): number {
   return seconds == null || seconds > 20 ? 1.2 : seconds > 10 ? .8 : seconds > 5 ? .5 : .25;
 }
+
+/** Both score icon and radar ring use the same countdown phase, independent of mount time. */
+export function bombPulseFrame(seconds: number | null) {
+  if (seconds === null) return { iconScale: 1, ringScale: 1, ringOpacity: .2 };
+  const phase = (Math.max(0, seconds) % bombPulsePeriod(seconds)) / bombPulsePeriod(seconds);
+  const beat = (.5 + .5 * Math.cos(phase * 2 * Math.PI));
+  return { iconScale: 1 + .18 * beat, ringScale: .35 + (1 - phase) * .85, ringOpacity: phase * .85 };
+}
+
+export function expiredSmokes(previous: Grenade[], current: Grenade[]): Grenade[] {
+  return previous.filter(g => grenadePhase(g) === 'smoke' && !current.some(n => n.id === g.id && grenadePhase(n) === 'smoke'));
+}

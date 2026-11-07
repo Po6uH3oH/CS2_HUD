@@ -131,8 +131,9 @@ export class GsiNormalizer {
   private raw: Obj = {};
   private lastTimestamp: number | null = null;
   private matchId = '';
+  private flashRange: 1 | 255 = 1;
   private state: GameState | null = null;
-  reset(): void { this.raw = {}; this.lastTimestamp = null; this.matchId = ''; this.state = null; }
+  reset(): void { this.raw = {}; this.lastTimestamp = null; this.matchId = ''; this.state = null; this.flashRange = 1; }
 
   ingest(payload: unknown, settings: Settings, now = Date.now()): { accepted: boolean; state: GameState; reason?: string } {
     const initial = this.state ?? createInitialState(settings, 'live', now);
@@ -149,13 +150,16 @@ export class GsiNormalizer {
       oldRound !== null && newRound !== null && newRound < oldRound ||
       incomingMap.phase === 'warmup' && previousMap.phase !== undefined && previousMap.phase !== 'warmup';
     let prev = initial;
-    if (newContext) { this.raw = {}; prev = createInitialState(settings, 'live', now); }
+    if (newContext) { this.raw = {}; this.flashRange = 1; prev = createInitialState(settings, 'live', now); }
     const roundChanged = !newContext && oldRound !== null && newRound !== null && newRound !== oldRound;
     if (roundChanged) {
       delete this.raw.bomb; delete this.raw.round; delete this.raw.phase_countdowns; delete this.raw.grenades;
       for (const entry of [...Object.values(object(this.raw.allplayers)), this.raw.player]) { const p = object(entry); p.state = {}; delete p.weapons; delete p.position; delete p.forward; }
       prev = { ...prev, bomb: emptyBomb(now), roundTimer: timer(null, null, 'unknown', now), pause: { ...prev.pause, active: false }, winner: null };
     }
+    const incomingPlayer = object(patch.player);
+    // A newly observed player must not inherit the previous target's flash/state.
+    if (string(incomingPlayer.steamid) && incomingPlayer.steamid !== object(this.raw.player).steamid) delete object(this.raw.player).state;
     this.raw = merge(this.raw, patch);
     removePrevious(this.raw, object(patch.previously), patch);
     removeExplicit(this.raw, patch.removed);
@@ -163,16 +167,27 @@ export class GsiNormalizer {
     if (timestamp !== null) this.lastTimestamp = timestamp;
     const raw = this.raw, map = object(raw.map), round = object(raw.round), phase = object(raw.phase_countdowns), bomb = object(raw.bomb);
     const activePlayer = object(raw.player);
+    // A fresh player-state flash is newer than a cached allplayers value (including 0).
+    const activeId = string(activePlayer.steamid), freshFlash = object(incomingPlayer.state);
+    const allPlayer = object(object(raw.allplayers)[activeId]);
+    if (has(freshFlash, 'flashed') && !has(object(object(object(patch.allplayers)[activeId]).state), 'flashed') && Object.keys(allPlayer).length) {
+      const allState = object(allPlayer.state);
+      if (freshFlash.flashed === null) delete allState.flashed; else allState.flashed = freshFlash.flashed;
+      allPlayer.state = allState;
+    }
     const observedCandidate = string(activePlayer.spectarget) || string(activePlayer.steamid);
     const oldById = new Map(prev.players.map(p => [p.steamId, p]));
     const sourcePlayers = Object.keys(object(raw.allplayers)).length ? object(raw.allplayers) : string(activePlayer.steamid) && side(activePlayer.team) ? { [string(activePlayer.steamid)]: activePlayer } : {};
+    // Some CS2 demos report 0/1 instead of the legacy byte range. Once byte data
+    // is observed, keep that scale for this source context, including its fading tail.
+    if ([...Object.values(sourcePlayers), activePlayer].some(p => (nonnegative(object(object(p).state).flashed) ?? 0) > 1)) this.flashRange = 255;
     const players: Player[] = Object.entries(sourcePlayers).flatMap(([id, entry]) => {
       const p = object(entry), s = object(p.state), stats = object(p.match_stats), playerSide = side(p.team); if (!playerSide) return [];
       const team = settings.teams.find(t => t.steamIds.includes(id) || t.roster?.some(r => r.steamId === id)) ?? settings.teams.find(t => t.id === oldById.get(id)?.teamId) ?? settings.teams.find(t => t.side === playerSide) ?? settings.teams[0];
       const health = nonnegative(s.health), inventory = weapons(p.weapons);
       const flashed = nonnegative(s.flashed) ?? (id === string(activePlayer.steamid) ? nonnegative(object(activePlayer.state).flashed) : null);
       return [{ steamId: id, name: string(p.name, team.roster?.find(r => r.steamId === id)?.name ?? id), teamId: team.id, side: playerSide, slot: observerKey(p.observer_slot),
-        health, flashed: flashed == null ? null : Math.min(255, flashed), armor: nonnegative(s.armor), helmet: bool(s.helmet), money: nonnegative(s.money), alive: health !== null && health > 0, defuseKit: bool(s.defusekit),
+        health, flashed: flashed == null ? null : Math.min(255, flashed / this.flashRange * 255), armor: nonnegative(s.armor), helmet: bool(s.helmet), money: nonnegative(s.money), alive: health !== null && health > 0, defuseKit: bool(s.defusekit),
         hasBomb: inventory.some(w => w.name === 'weapon_c4') || bomb.state === 'carried' && bomb.player === id, weapons: inventory, inventoryKnown: has(p, 'weapons'),
         kills: nonnegative(stats.kills), assists: nonnegative(stats.assists), deaths: nonnegative(stats.deaths), roundKills: nonnegative(s.round_kills), roundDamage: nonnegative(s.round_totaldmg), equipmentValue: nonnegative(s.equip_value),
         position: parseVector(p.position), deathPosition: health === 0 ? (!roundChanged ? oldById.get(id)?.deathPosition : null) ?? parseVector(p.position) ?? (!roundChanged ? oldById.get(id)?.position : null) ?? null : null, forward: parseVector(p.forward), observed: id === observedCandidate }];
@@ -273,7 +288,14 @@ export class GsiNormalizer {
     const grenades = Object.entries(object(raw.grenades)).flatMap(([id, entry]) => {
       const g = object(entry), flames = Object.values(object(g.flames)).map(parseVector).filter((p): p is Vec3 => p !== null);
       const position = parseVector(g.position) ?? (flames.length ? flames.reduce((sum, p) => ({ x: sum.x + p.x / flames.length, y: sum.y + p.y / flames.length, z: sum.z + p.z / flames.length }), { x: 0, y: 0, z: 0 }) : null);
-      return position ? [{ id, type: string(g.type, 'unknown'), position, owner: string(g.owner) || undefined, velocity: parseVector(g.velocity), effectTime: nonnegative(g.effecttime), lifetime: nonnegative(g.lifetime), flames }] : [];
+      const type = string(g.type, 'unknown'), lifetime = nonnegative(g.lifetime);
+      const previous = !newContext && !roundChanged ? prev.grenades.find(old => old.id === id && old.type === type && !(lifetime !== null && old.lifetime !== null && lifetime < old.lifetime)) : undefined;
+      const reportedOwner = string(g.owner);
+      const owner = previous?.ownerTeamId || previous?.ownerSide ? previous.owner : (reportedOwner && reportedOwner !== '0' ? reportedOwner : previous?.owner);
+      const thrower = players.find(p => p.steamId === owner) ?? oldById.get(owner ?? '');
+      // Throw ownership belongs to the grenade, not to the owner's current life/team state.
+      return position ? [{ id, type, position, owner, ownerTeamId: previous?.ownerTeamId ?? thrower?.teamId, ownerSide: previous?.ownerSide ?? thrower?.side,
+        velocity: parseVector(g.velocity), effectTime: nonnegative(g.effecttime), lifetime, flames }] : [];
     });
     this.state = { revision: initial.revision + 1, mode: 'live', receivedAt: now, connected: true, map: string(map.name, settings.match.map), phase: phaseName, round: currentRound,
       teams, players, observedId: players.some(p => p.steamId === observedCandidate) ? observedCandidate : null, roundTimer, bomb: normalizedBomb, pause, roundHistory: history.sort((a, b) => a.round - b.round), grenades,

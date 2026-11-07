@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useId, type CSSProperties, type ReactNode } from 'react';
 import type { GameState, Grenade, HudSettings, Player, RadarMap, Settings, TeamState, Timer } from '../../../../packages/shared/types';
 import { economy, observerOrder, presentationState, remaining, selectRadarLayer, worldToRadar } from '../../../../packages/core';
-import { grenadePhase, grenadeBursts, bombPulsePeriod } from '../../../../packages/core/grenade-presentation';
+import { grenadePhase, grenadeBursts, bombPulseFrame, expiredSmokes } from '../../../../packages/core/grenade-presentation';
 import { primaryWeapon, weaponFill } from '../../../../packages/core/player-loadout';
 import { useRadarFocus } from './useRadarFocus';
+import { MapOrder } from './MapOrder';
 import { RadarTrack } from '../../../../packages/core/radar-motion';
 import { EquipmentIcon, TeamMark, WeaponIcon, grenadeKind, isGrenade, itemName } from './icons';
 
@@ -58,8 +59,8 @@ export function Overlay({ state: rawState, settings, variant, overlay = 'auto', 
       {state.mode === 'demo' && <div className="ov-demo-label"><i />ДЕМОНСТРАЦИЯ</div>}
       {state.mode === 'live' && !state.connected && <div className="ov-stale"><i />{state.revision > 0 ? 'НЕТ СВЕЖИХ ДАННЫХ · HUD ПРИОСТАНОВЛЕН' : 'ОЖИДАНИЕ ДАННЫХ НАБЛЮДАТЕЛЯ'}</div>}
       {!pause && <>
-        {settings.hud.showRadar ? <Radar state={state} settings={settings} /> : <div className="ov-map-only">{mapName(state.map)} <span>BO{settings.match.bestOf}</span></div>}
-        <AliveCount state={state} />
+        {settings.hud.showRadar ? <Radar state={state} settings={settings} now={now} /> : <div className="ov-map-only">{mapName(state.map)} <span>BO{settings.match.bestOf}</span></div>}
+        {settings.hud.showAliveCount && <AliveCount state={state} />}
         {settings.hud.showObserved && <ObservedCard state={state} />}
         <BombStatus state={state} now={now} />
         {state.winner && <Winner state={state} />}
@@ -78,16 +79,19 @@ export function Overlay({ state: rawState, settings, variant, overlay = 'auto', 
 }
 
 function Scoreboard({ state, settings, now, pause }: { state: GameState; settings: Settings; now: number; pause: boolean }) {
+  const explosion = useScoreExplosion(state);
   const planted = !pause && ['planted', 'defusing'].includes(state.bomb.state) && !['over', 'gameover'].includes(state.phase);
   const timer = planted ? state.bomb.timer : state.roundTimer;
   const value = projected(timer, state, now);
   const progress = value != null && timer.duration ? Math.max(0, Math.min(1, value / timer.duration)) : 0;
+  const beat = bombPulseFrame(value);
+  const pulsing = planted && settings.hud.animate && state.connected && timer.running && !state.pause.active;
   return <header className={`ov-scoreboard ${planted ? 'ov-scoreboard-bomb' : ''} ${planted && value != null && value < 10 ? 'ov-critical' : ''}`}>
     <div className="ov-score-main">
       <ScoreTeam team={state.teams[0]} reverse={false} />
       <div className="ov-score-number" style={{ '--team': state.teams[0].color } as Vars}>{val(state.teams[0].score)}</div>
       <div className="ov-time-block">
-        {planted ? <div className="ov-bomb-label"><EquipmentIcon kind="bomb" title="Бомба установлена" />{timer.source === 'estimate' && <small title="Расчётный таймер">≈</small>}</div> : <>{!pause && state.phase !== 'live' && <div className="ov-time-label">{phaseNames[state.phase] || state.phase.toUpperCase()}</div>}<strong>{pause ? 'ПАУЗА' : clock(value)}</strong></>}
+        {!pause && explosion ? <div className="ov-score-explosion"><img src="/assets/icons/ui/explosion.gif" alt="Взрыв бомбы" /></div> : planted ? <div className="ov-bomb-label"><span className="ov-score-bomb-beat" style={{scale:pulsing ? beat.iconScale : 1}}><EquipmentIcon kind="bomb" title="Бомба установлена" /></span>{timer.source === 'estimate' && <small title="Расчётный таймер">≈</small>}</div> : <>{!pause && state.phase !== 'live' && <div className="ov-time-label">{phaseNames[state.phase] || state.phase.toUpperCase()}</div>}<strong>{pause ? 'ПАУЗА' : clock(value)}</strong></>}
         <span>РАУНД {state.round || '—'}</span>
       </div>
       <div className="ov-score-number" style={{ '--team': state.teams[1].color } as Vars}>{val(state.teams[1].score)}</div>
@@ -211,36 +215,49 @@ function EconomyPanel({ state, team, edge, visible }: { visible: boolean; state:
   </section>;
 }
 
-function Radar({ state, settings }: { state: GameState; settings: Settings }) {
+function Radar({ state, settings, now }: { state: GameState; settings: Settings; now: number }) {
   const config = settings.radarMaps.find(entry => entry.id === state.map || entry.id === state.map.split('/').pop());
   const observed = state.players.find(player => player.steamId === state.observedId);
   const activeLayer = settings.hud.radarLayer === 'auto' ? observed?.position && config ? selectRadarLayer(observed.position, config) : config?.layers[0]?.id : settings.hud.radarLayer;
   const splitNuke = config?.id === 'de_nuke' && ['auto', 'both'].includes(settings.hud.radarLayer);
   const layers = splitNuke || settings.hud.radarLayer === 'both' ? config?.layers : config?.layers.filter(layer => layer.id === activeLayer || config.layers.length === 1).slice(0, 1);
-  const style: Vars = { left: settings.hud.radarX, top: 18, width: settings.hud.radarSize, opacity: settings.hud.radarOpacity };
-  return <section className={`ov-radar ${splitNuke ? 'ov-radar-nuke' : settings.hud.radarLayer === 'both' ? 'ov-radar-both' : ''}`} style={style}>
+  const seriesRows = settings.hud.showMapOrder && settings.match.bestOf > 1 ? Math.min(settings.match.maps.length, settings.match.bestOf) : 0;
+  const stackedLayers = splitNuke ? layers?.length || 1 : 1;
+  const style: Vars = { left: settings.hud.radarX, top: 18, width: settings.hud.radarSize, opacity: settings.hud.radarOpacity,
+    '--radar-layer-max-height': `${(750 - 54 - seriesRows * 41 - (stackedLayers - 1) * 12) / stackedLayers}px` };
+  return <section className={`ov-radar ${seriesRows ? 'ov-radar-series' : ''} ${splitNuke ? 'ov-radar-nuke' : settings.hud.radarLayer === 'both' ? 'ov-radar-both' : ''}`} style={style}>
     <header><strong>{mapName(state.map)}</strong><span>BO{settings.match.bestOf}</span></header>
-    {config && layers?.length ? layers.map(layer => <div key={`${state.map}:${layer.id}`} className="ov-radar-layer"><div className="ov-radar-layer-name">{config.layers.length > 1 ? layer.name : ""}</div>{(config.calibrated && layer.image) ? <RadarLayer state={state} map={config} layer={layer.id} image={layer.image} hud={settings.hud} /> : <div className="ov-radar-unavailable"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="17" /><circle cx="24" cy="24" r="8" /><path d="M24 3v42M3 24h42" /></svg><strong>ОБЗОРНАЯ КАРТА<br />НЕ НАСТРОЕНА</strong></div>}</div>) : <div className="ov-radar-unavailable"><strong>КАРТА НЕ НАСТРОЕНА</strong></div>}
+    {config && layers?.length ? layers.map(layer => <div key={`${state.map}:${layer.id}`} className="ov-radar-layer"><div className="ov-radar-layer-name">{config.layers.length > 1 ? layer.name : ""}</div>{(config.calibrated && layer.image) ? <RadarLayer state={state} map={config} layer={layer.id} image={layer.image} hud={settings.hud} now={now} /> : <div className="ov-radar-unavailable"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="17" /><circle cx="24" cy="24" r="8" /><path d="M24 3v42M3 24h42" /></svg><strong>ОБЗОРНАЯ КАРТА<br />НЕ НАСТРОЕНА</strong></div>}</div>) : <div className="ov-radar-unavailable"><strong>КАРТА НЕ НАСТРОЕНА</strong></div>}
+    <MapOrder settings={settings} state={state} />
   </section>;
 }
 
-function RadarLayer({ state, map, layer, image, hud }: { state: GameState; map: RadarMap; layer: string; image: string; hud: HudSettings }) {
+function RadarLayer({ state, map, layer, image, hud, now }: { state: GameState; map: RadarMap; layer: string; image: string; hud: HudSettings; now: number }) {
   const previousGrenades = useRef<{ context: string; items: Grenade[] }>({ context: '', items: [] });
   const [bursts, setBursts] = useState<{ grenade: Grenade; expires: number }[]>([]);
+  const [smokeExits, setSmokeExits] = useState<{grenade: Grenade; expires: number}[]>([]);
   useEffect(() => {
     const now = performance.now(), context = `${state.mode}:${state.map}:${state.round}`;
     const sameContext = previousGrenades.current.context === context;
     const events = state.connected && !['over', 'gameover', 'unknown'].includes(state.phase)
       ? grenadeBursts(sameContext ? previousGrenades.current.items : [], state.grenades) : [];
+    const endingSmokes = sameContext && state.connected && hud.animate ? expiredSmokes(previousGrenades.current.items, state.grenades) : [];
+    setSmokeExits(old => [...(sameContext ? old.filter(b => b.expires > now && !state.grenades.some(g => g.id === b.grenade.id)) : []), ...endingSmokes.map(grenade => ({grenade, expires: now + 850}))]);
     previousGrenades.current = { context, items: state.grenades };
     setBursts(old => [...(sameContext && state.connected ? old.filter(b => b.expires > now) : []),
       ...events.map(grenade => ({ grenade, expires: now + (grenade.type.includes('flash') ? 700 : 550) }))]);
-  }, [state.revision, state.connected, state.round, state.map, state.mode]);
+  }, [state.revision, state.connected, state.round, state.map, state.mode, hud.animate]);
   useEffect(() => {
     if (!bursts.length) return;
     const t = window.setTimeout(() => setBursts(old => old.filter(b => b.expires > performance.now())), Math.max(0, Math.min(...bursts.map(b => b.expires)) - performance.now()) + 5);
     return () => clearTimeout(t);
   }, [bursts]);
+  useEffect(() => {
+    if (!smokeExits.length) return;
+    const t = window.setTimeout(() => setSmokeExits(old => old.filter(b => b.expires > performance.now())), Math.max(0, Math.min(...smokeExits.map(b => b.expires)) - performance.now()) + 5);
+    return () => clearTimeout(t);
+  }, [smokeExits]);
+  const smokeColor = (g: Grenade) => g.ownerSide ? hud.sideColors[g.ownerSide] : state.teams.find(t => t.id === (g.ownerTeamId ?? state.players.find(p => p.steamId === g.owner)?.teamId))?.color;
   const bounds = map.viewBounds ?? { x: 0, y: 0, width: map.size, height: map.size };
   const focusPlayers = state.players.filter(p => p.alive && p.position && selectRadarLayer(p.position, map) === layer);
   const focusPoints = focusPlayers.map(p => worldToRadar(p.position!, map));
@@ -260,7 +277,8 @@ function RadarLayer({ state, map, layer, image, hud }: { state: GameState; map: 
       const point = worldToRadar(player.deathPosition!, map), team = state.teams.find(t => t.id === player.teamId);
       return <g className="ov-death-marker" key={`death-${player.steamId}`} transform={`translate(${point.x},${point.y}) scale(.65)`} style={{ color: team?.color }}><title>{`Место смерти: ${player.name}`}</title><path d={`M${-markerSize * .65},${-markerSize * .65}l${markerSize * 1.3},${markerSize * 1.3}m0,${-markerSize * 1.3}l${-markerSize * 1.3},${markerSize * 1.3}`} fill="none" stroke="#07121e" strokeWidth={markerSize * .7} /><path d={`M${-markerSize * .65},${-markerSize * .65}l${markerSize * 1.3},${markerSize * 1.3}m0,${-markerSize * 1.3}l${-markerSize * 1.3},${markerSize * 1.3}`} fill="none" stroke="currentColor" strokeWidth={markerSize * .35} /></g>;
     })}
-    {hud.showGrenades && state.grenades.filter(g => g.flames.length ? g.flames.some(p => selectRadarLayer(p, map) === layer) : selectRadarLayer(g.position, map) === layer).map(grenade => <RadarGrenade key={grenade.id} grenade={grenade} map={map} layer={layer} size={markerSize} ownerColor={state.teams.find(t => t.id === state.players.find(p => p.steamId === grenade.owner)?.teamId)?.color} sampleAt={state.receivedAt} animate={hud.animate && state.connected} />)}
+    {hud.showGrenades && state.grenades.filter(g => g.flames.length ? g.flames.some(p => selectRadarLayer(p, map) === layer) : selectRadarLayer(g.position, map) === layer).map(grenade => <RadarGrenade key={grenade.id} grenade={grenade} map={map} layer={layer} size={markerSize} ownerColor={smokeColor(grenade)} sampleAt={state.receivedAt} animate={hud.animate && state.connected} />)}
+    {hud.showGrenades && smokeExits.filter(b => selectRadarLayer(b.grenade.position,map) === layer).map(b => <g className="ov-smoke-exit" key={`${b.grenade.id}:${b.expires}`}><RadarGrenade grenade={b.grenade} map={map} layer={layer} size={markerSize} ownerColor={smokeColor(b.grenade)} sampleAt={state.receivedAt} animate={false} /></g>)}
     {hud.showGrenades && bursts.filter(b => selectRadarLayer(b.grenade.position, map) === layer).map(b => { const p = worldToRadar(b.grenade.position, map); return <g key={`${b.grenade.id}-${b.expires}`} transform={`translate(${p.x},${p.y})`}><GrenadeBurst type={b.grenade.type} size={markerSize} animate={hud.animate} /></g>; })}
     {positions.map(player => {
       const point = worldToRadar(player.position!, map);
@@ -269,7 +287,7 @@ function RadarLayer({ state, map, layer, image, hud }: { state: GameState; map: 
       const angle = forward ? Math.atan2(forward.y - point.y, forward.x - point.x) * 180 / Math.PI : null;
       return <RadarMotion key={player.steamId} x={point.x} y={point.y} sampleAt={state.receivedAt} animate={hud.animate && state.connected} color={team?.color || '#fff'}><title>{`${player.name} · ${player.side}`}</title>{angle != null && <path d={`M${markerSize * .7},${-markerSize * .62} L${markerSize * 1.9},0 L${markerSize * .7},${markerSize * .62}Z`} transform={`rotate(${angle})`} fill="currentColor" opacity=".55" />}<circle r={markerSize} fill="currentColor" stroke={player.steamId === state.observedId ? '#fff' : '#111923'} strokeWidth={map.size / 300 * symbolScale} /><circle className="ov-player-flash" r={markerSize} fill="white" opacity={Math.min(1, Math.max(0, (player.flashed ?? 0) / 255))} /><text textAnchor="middle" dominantBaseline="central" fill="#101820" fontSize={markerSize * 1.25} fontWeight="900">{player.slot ?? "?"}</text>{player.hasBomb && <image className="ov-map-bomb" href="/assets/icons/effects/map_bomb.svg" x={markerSize * .35} y={markerSize * .35} width={markerSize} height={markerSize} />}</RadarMotion>;
     })}
-    <RadarBomb state={state} map={map} layer={layer} size={markerSize} animate={hud.animate} />
+    <RadarBomb state={state} map={map} layer={layer} size={markerSize} animate={hud.animate} now={now} />
   </svg>;
 }
 
@@ -320,8 +338,7 @@ function GrenadeBurst({ type, size, animate }: { type: string; size: number; ani
   return <image className={flash ? 'ov-flash-burst' : 'ov-he-burst'} href={flash ? '/assets/icons/effects/flash.gif' : '/assets/icons/effects/he-burst.svg'} x={-size*2} y={-size*2} width={size*4} height={size*4} onError={flash ? () => setMissing(true) : undefined} />;
 }
 
-function RadarBomb({ state, map, layer, size, animate }: { state: GameState; map: RadarMap; layer: string; size: number; animate: boolean }) {
-  const now = useServerClock(state);
+function RadarBomb({ state, map, layer, size, animate, now }: { state: GameState; map: RadarMap; layer: string; size: number; animate: boolean; now: number }) {
   const previous = useRef<{ context: string; bomb: GameState['bomb'] } | null>(null);
   const [explosion, setExplosion] = useState<GameState['bomb']['position']>(null);
   useEffect(() => {
@@ -339,12 +356,28 @@ function RadarBomb({ state, map, layer, size, animate }: { state: GameState; map
   const blast = explosion && selectRadarLayer(explosion, map) === layer ? worldToRadar(explosion, map) : null;
   const planted = ['planted', 'defusing'].includes(state.bomb.state);
   const seconds = projected(state.bomb.timer, state, now);
+  const beat = bombPulseFrame(seconds);
   const pulse = animate && state.connected && state.bomb.timer.running && !state.pause.active;
   return <>
     {point && <g transform={`translate(${point.x},${point.y})`}><title>{`C4 · ${state.bomb.state}`}</title>
-      {planted && pulse && <circle className="ov-planted-pulse" r={size*2.3} fill="#ff273e" fillOpacity=".22" stroke="#ff3b4d" strokeOpacity=".45" strokeWidth={size*.1} style={{animationDuration:`${bombPulsePeriod(seconds)}s`}} />}
+      {planted && pulse && <circle className="ov-planted-pulse" r={size*2.3} fill="#ff273e" fillOpacity=".22" stroke="#ff3b4d" strokeOpacity=".45" strokeWidth={size*.1} style={{animation:"none",scale:beat.ringScale,opacity:beat.ringOpacity}} />}
       <image className="ov-map-bomb" href="/assets/icons/effects/map_bomb.svg" x={-size} y={-size} width={size*2} height={size*2} />
     </g>}
     {blast && <g transform={`translate(${blast.x},${blast.y})`}><image className="ov-bomb-explosion" href="/assets/icons/effects/he-burst.svg" x={-size*5} y={-size*5} width={size*10} height={size*10} /></g>}
   </>;
+}
+
+function useScoreExplosion(state: GameState) {
+  const last = useRef({context:'', exploded:false});
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const context = `${state.mode}:${state.map}:${state.round}`;
+    const exploded = state.bomb.state === 'exploded';
+    const changed = last.current.context !== context;
+    if (changed || !exploded) setActive(false);
+    if (exploded && state.connected && (changed || !last.current.exploded)) setActive(true);
+    last.current = { context, exploded };
+  }, [state.revision, state.mode, state.map, state.round, state.connected]);
+  useEffect(() => { if (!active) return; const t = window.setTimeout(() => setActive(false),1520); return () => clearTimeout(t); },[active]);
+  return active;
 }

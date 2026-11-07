@@ -191,6 +191,11 @@ export function createApp(options: Options = {}) {
     if (completed) {
       recordedMaps.push(completed.key);
       settings.match.seriesScore[completed.winner] = Math.min(Math.ceil(settings.match.bestOf / 2), settings.match.seriesScore[completed.winner] + 1);
+      settings.match.mapDetails[state.map] = {
+        ...(settings.match.mapDetails[state.map] ?? { pickTeamId: null, decider: false }),
+        scores: Object.fromEntries(state.teams.map(team => [team.id, team.score!])),
+      };
+      if (!settings.match.maps.includes(state.map) && settings.match.maps.length < settings.match.bestOf) settings.match.maps.push(state.map);
       db.database.exec('BEGIN');
       try { db.set('settings', settings); db.set('completedMaps', recordedMaps); db.database.exec('COMMIT'); }
       catch (error) { db.database.exec('ROLLBACK'); throw error; }
@@ -327,7 +332,7 @@ export function createApp(options: Options = {}) {
     next.match.faceitMatchId = body.matchId;
     if (settings.match.faceitMatchId !== body.matchId) {
       next.match.id = `faceit-${body.matchId}`.slice(0, 100);
-      next.match.scoreOverride = null; next.match.seriesScore = [0, 0];
+      next.match.scoreOverride = null; next.match.seriesScore = [0, 0]; next.match.mapDetails = {};
     }
     next.match.name = `${next.teams[0].name} vs ${next.teams[1].name}`;
     if ([1, 3, 5].includes(Number(raw.best_of))) next.match.bestOf = Number(raw.best_of) as 1 | 3 | 5;

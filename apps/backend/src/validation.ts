@@ -16,6 +16,7 @@ export const teamSchema = z.object({
 export const matchSchema = z.object({
   id, name: text, map: z.string().max(100), bestOf: z.union([z.literal(1), z.literal(3), z.literal(5)]),
   seriesScore: z.tuple([nonnegative.int().max(3), nonnegative.int().max(3)]), maps: z.array(z.string().max(100)).max(10),
+  mapDetails: z.record(z.string().max(100).regex(/^[a-zA-Z0-9_/-]+$/), z.object({ pickTeamId: id.nullable(), decider: z.boolean(), scores: z.record(id, nonnegative.int().max(999)) })).default({}),
   faceitMatchId: z.string().max(100), scoreOverride: z.tuple([nonnegative.int().max(999), nonnegative.int().max(999)]).nullable(),
   timeouts: z.tuple([nonnegative.int().max(99).nullable(), nonnegative.int().max(99).nullable()]),
   lossBonus: z.tuple([nullableMoney, nullableMoney]),
@@ -29,6 +30,7 @@ export const settingsSchema = z.object({
   match: matchSchema, tournament: tournamentSchema,
   hud: z.object({
     scale: z.number().min(0.5).max(1.5), opacity: z.number().min(0).max(1), showRadar: z.boolean(),
+    showAliveCount: z.boolean().default(true), showMapOrder: z.boolean().default(false),
     showPlayers: z.boolean(), showObserved: z.boolean(), showHistory: z.boolean(), animate: z.boolean(),
     radarSize: z.number().min(120).max(1000), radarX: z.number().min(0).max(2560), radarY: z.number().min(0).max(1440),
     radarOpacity: z.number().min(0).max(1), radarLayer: z.string().max(40), showGrenades: z.boolean(), timerStyle: z.enum(['bar', 'compact']), sideColors: z.object({ T: color, CT: color }).default({ T: '#ef3c50', CT: '#00c9e8' }),

@@ -1,162 +1,162 @@
 [
   {
-    "id": "01f631e6-ffe1-4e4d-95ee-a72727f81337",
+    "id": "2aedacb4-3199-49eb-acb5-6137c97ea961",
+    "kind": "team",
+    "name": "Team Future",
+    "data": {
+      "id": "fnatic",
+      "name": "Team Future",
+      "tag": "Future",
+      "logo": "/assets/library/logos/92595a9c-d12d-43e4-b91a-b0e649372324.png",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793998811754
+  },
+  {
+    "id": "8246cc1b-ae7c-4a6f-8500-7c272dc71c6b",
     "kind": "team",
     "name": "Team ATOM",
     "data": {
       "id": "navi",
       "name": "Team ATOM",
       "tag": "ATOM",
-      "logo": "",
+      "logo": "/assets/library/logos/30046b7e-d973-4947-bb1e-18a8c229a312.png",
       "color": "#ef3c50",
       "secondaryColor": "#902737",
       "side": "T",
       "steamIds": []
     },
-    "updatedAt": 1793915265654
+    "updatedAt": 1793998720598
   },
   {
-    "id": "03ccd99a-976d-4fa0-904f-f2da7670543f",
+    "id": "8a8f2a89-909a-41bb-97bd-5d4b396130d2",
     "kind": "team",
-    "name": "Пролижи",
-    "data": {
-      "id": "navi",
-      "name": "Пролижи",
-      "tag": "Пролижи",
-      "logo": "",
-      "color": "#ef3c50",
-      "secondaryColor": "#902737",
-      "side": "T",
-      "steamIds": []
-    },
-    "updatedAt": 1793915385210
-  },
-  {
-    "id": "3483bde0-3702-4ed9-b35c-df375e3fc1af",
-    "kind": "team",
-    "name": "dmitrieVci Team",
+    "name": "Перспектива",
     "data": {
       "id": "fnatic",
-      "name": "dmitrieVci Team",
-      "tag": "dmitri",
-      "logo": "",
+      "name": "Перспектива",
+      "tag": "Т-ива",
+      "logo": "/assets/library/logos/c68a2ca3-7553-4eca-91aa-05423900a949.png",
       "color": "#00c9e8",
       "secondaryColor": "#067b91",
       "side": "CT",
       "steamIds": []
     },
-    "updatedAt": 1793915338750
+    "updatedAt": 1793998943102
   },
   {
-    "id": "42f4b1b0-df58-4b94-90ac-c20c13494453",
+    "id": "92009c87-6062-4309-8e6e-5e8d71d92722",
     "kind": "team",
     "name": "Team Youth",
     "data": {
       "id": "fnatic",
       "name": "Team Youth",
       "tag": "Youth",
-      "logo": "",
+      "logo": "/assets/library/logos/10d4c5e4-b62c-4c33-9578-53127de16539.png",
       "color": "#00c9e8",
       "secondaryColor": "#067b91",
       "side": "CT",
       "steamIds": []
     },
-    "updatedAt": 1793915250449
+    "updatedAt": 1793998721445
   },
   {
-    "id": "565a57a3-f6f0-4a62-a61f-22d6dbc82f33",
+    "id": "972b6a72-8e7c-48e9-9a2a-8f14b175e431",
+    "kind": "team",
+    "name": "dmitrieVci Team",
+    "data": {
+      "id": "navi",
+      "name": "dmitrieVci Team",
+      "tag": "dmitri",
+      "logo": "/assets/library/logos/f93c0faf-fb7d-4ee4-b8af-be91ec1939f1.png",
+      "color": "#00c9e8",
+      "secondaryColor": "#067b91",
+      "side": "T",
+      "steamIds": []
+    },
+    "updatedAt": 1793998761382
+  },
+  {
+    "id": "baf329df-e94a-45d3-80cc-dcd5319687da",
     "kind": "team",
     "name": "5П",
     "data": {
-      "id": "fnatic",
+      "id": "navi",
       "name": "5П",
       "tag": "5П",
-      "logo": "",
+      "logo": "/assets/library/logos/a847d4a0-a356-4780-abc2-d10b0043c7e5.png",
       "color": "#00c9e8",
       "secondaryColor": "#067b91",
-      "side": "CT",
-      "steamIds": []
-    },
-    "updatedAt": 1793915394017
-  },
-  {
-    "id": "5f42006c-a5e7-45dd-9e43-fd61e6c83f28",
-    "kind": "team",
-    "name": "Колибри",
-    "data": {
-      "id": "navi",
-      "name": "Колибри",
-      "tag": "Колибри",
-      "logo": "",
-      "color": "#ef3c50",
-      "secondaryColor": "#902737",
       "side": "T",
       "steamIds": []
     },
-    "updatedAt": 1793915180248
+    "updatedAt": 1793998744426
   },
   {
-    "id": "7b334411-5d63-4e65-b2ef-8d74c65e30c5",
-    "kind": "team",
-    "name": "OnlyFanSPbSO",
-    "data": {
-      "id": "navi",
-      "name": "OnlyFanSPbSO",
-      "tag": "OnlyFan",
-      "logo": "",
-      "color": "#ef3c50",
-      "secondaryColor": "#902737",
-      "side": "T",
-      "steamIds": []
-    },
-    "updatedAt": 1793915313166
-  },
-  {
-    "id": "99a21d2a-9f7c-4114-a400-c969e34c7278",
-    "kind": "team",
-    "name": "Team Future",
-    "data": {
-      "id": "navi",
-      "name": "Team Future",
-      "tag": "Future",
-      "logo": "",
-      "color": "#ef3c50",
-      "secondaryColor": "#902737",
-      "side": "T",
-      "steamIds": []
-    },
-    "updatedAt": 1793915229904
-  },
-  {
-    "id": "c3df63f9-15df-4990-bfe2-5865225a63e7",
-    "kind": "team",
-    "name": "Перспектива",
-    "data": {
-      "id": "fnatic",
-      "name": "Перспектива",
-      "tag": "Перспект",
-      "logo": "",
-      "color": "#00c9e8",
-      "secondaryColor": "#067b91",
-      "side": "CT",
-      "steamIds": []
-    },
-    "updatedAt": 1793915214177
-  },
-  {
-    "id": "e280219e-9cec-41c7-a5f3-fff053c44bc9",
+    "id": "bf21b24c-6c59-434a-b68c-62fdd3570a60",
     "kind": "team",
     "name": "Косоглазый алабай",
     "data": {
-      "id": "fnatic",
+      "id": "navi",
       "name": "Косоглазый алабай",
       "tag": "Алабай",
-      "logo": "",
+      "logo": "/assets/library/logos/17cba352-301e-4359-9646-4308fcd3fd64.png",
       "color": "#00c9e8",
       "secondaryColor": "#067b91",
+      "side": "T",
+      "steamIds": []
+    },
+    "updatedAt": 1793998810965
+  },
+  {
+    "id": "c3906a72-5a4b-4b00-995c-30cbd8b15387",
+    "kind": "team",
+    "name": "OnlyFanSPbSO",
+    "data": {
+      "id": "fnatic",
+      "name": "OnlyFanSPbSO",
+      "tag": "OnlyFan",
+      "logo": "/assets/library/logos/79f65e84-6ea5-4184-8ff9-643d29a05b2c.png",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
       "side": "CT",
       "steamIds": []
     },
-    "updatedAt": 1793915292726
+    "updatedAt": 1793998761991
+  },
+  {
+    "id": "d980ef5d-fdce-4608-bc44-30bb5be04424",
+    "kind": "team",
+    "name": "Пролижи",
+    "data": {
+      "id": "fnatic",
+      "name": "Пролижи",
+      "tag": "Пролижи",
+      "logo": "/assets/library/logos/f28c8ed0-0d13-4824-b39d-697e04c9db18.png",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793998745238
+  },
+  {
+    "id": "f1ded7a0-4d11-4e28-ba62-58910d3903ce",
+    "kind": "team",
+    "name": "Колибри",
+    "data": {
+      "id": "fnatic",
+      "name": "Колибри",
+      "tag": "Колибри",
+      "logo": "/assets/library/logos/ac88f795-e690-473a-9fa1-25c7a45d5754.png",
+      "color": "#ef3c50",
+      "secondaryColor": "#902737",
+      "side": "CT",
+      "steamIds": []
+    },
+    "updatedAt": 1793998827203
   }
 ]
