@@ -39,9 +39,9 @@ export function bombPulseFrame(seconds: number | null) {
   return { iconScale: 1 + .18 * beat, ringScale: .35 + (1 - phase) * .85, ringOpacity: phase * .85 };
 }
 
-/** Smoke fades during the last second of its 18.5-second life, never after removal. */
+/** Start fading 19 seconds after deployment; keep the one-second fade, never after removal. */
 export function smokeOpacity(effectAge: number | null, animate = true): number {
-  if (effectAge == null || effectAge <= 17.5) return 1;
-  if (effectAge >= 18.5) return 0;
-  return animate ? 18.5 - effectAge : 1;
+  if (effectAge == null || effectAge <= 19) return 1;
+  if (effectAge >= 20) return 0;
+  return animate ? 20 - effectAge : 1;
 }

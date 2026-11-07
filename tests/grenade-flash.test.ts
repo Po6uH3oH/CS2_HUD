@@ -7,17 +7,21 @@ import { grenadePhase, grenadeBursts, bombPulsePeriod, bombPulseFrame, smokeOpac
 import { Overlay } from '../apps/web/src/overlay/Overlay.js';
 
 test('smoke retains thrower side after death, lost owner and player removal; reused entities get fresh ownership', () => {
-  const n = new GsiNormalizer();
-  const smoke = { type:'smoke', position:'0,0,-400', owner:'a', lifetime:'1', effecttime:'0' };
-  n.ingest({map:{name:'de_nuke',round:1}, allplayers:{a:{team:'T',state:{health:100}}},grenades:{s:smoke}},defaultSettings,1000);
-  let s=n.ingest({allplayers:{a:{team:'T',state:{health:0}}},grenades:{s:{owner:'0',effecttime:'3',lifetime:'5'}}},defaultSettings,2000).state;
-  assert.equal(s.grenades[0].ownerSide,'T'); assert.equal(s.grenades[0].owner,'a');
-  s=n.ingest({allplayers:{},grenades:{s:{owner:null,lifetime:'7'}}},defaultSettings,3000).state;
-  assert.equal(s.grenades[0].ownerSide,'T');
-  const rendered=renderToStaticMarkup(createElement(Overlay,{state:s,settings:defaultSettings,variant:'game'}));
-  assert.match(rendered,/stroke="#ef3c50"/);
-  s=n.ingest({allplayers:{b:{team:'CT',state:{health:100}}},grenades:{s:{...smoke,owner:'b',lifetime:'.2'}}},defaultSettings,4000).state;
-  assert.equal(s.grenades[0].ownerSide,'CT'); assert.equal(s.grenades[0].owner,'b');
+  for (const side of ['T', 'CT'] as const) {
+    const n = new GsiNormalizer();
+    const smoke = { type:'smoke', position:'0,0,-400', owner:'a', lifetime:'1', effecttime:'0' };
+    n.ingest({map:{name:'de_nuke',round:1}, allplayers:{a:{team:side,state:{health:100}}},grenades:{s:smoke}},defaultSettings,1000);
+    let s=n.ingest({allplayers:{a:{team:side,state:{health:0}}},grenades:{s:{owner:'0',effecttime:'3',lifetime:'5'}}},defaultSettings,2000).state;
+    assert.equal(s.grenades[0].ownerSide,side); assert.equal(s.grenades[0].owner,'a');
+    s=n.ingest({allplayers:{},grenades:{s:{owner:null,lifetime:'7'}}},defaultSettings,3000).state;
+    assert.equal(s.grenades[0].ownerSide,side);
+    const rendered=renderToStaticMarkup(createElement(Overlay,{state:s,settings:defaultSettings,variant:'game'}));
+    const smokeMarkup = rendered.match(/class="ov-smoke-area">([\s\S]*?)<\/g>/)![1];
+    assert.ok(smokeMarkup.includes(`stroke="${defaultSettings.hud.sideColors[side]}"`));
+    assert.equal((smokeMarkup.match(/stroke=/g) ?? []).length, 1);
+    s=n.ingest({allplayers:{b:{team:'CT',state:{health:100}}},grenades:{s:{...smoke,owner:'b',lifetime:'.2'}}},defaultSettings,4000).state;
+    assert.equal(s.grenades[0].ownerSide,'CT'); assert.equal(s.grenades[0].owner,'b');
+  }
 });
 
 test('bomb pulse stays bounded, repeats each period and rests without a countdown', () => {
@@ -107,12 +111,14 @@ test('unit flash values remain visible; byte streams preserve their low intensit
   assert.equal(n.ingest({allplayers:{a:{team:'T',state:{health:100,flashed:1}}}},defaultSettings,1400).state.players[0].flashed,255);
 });
 
-test('smoke fades from 17.5 to 18.5 seconds and never lingers beyond its lifetime', () => {
+test('smoke starts fading 1.5 seconds later, from 19 to 20 seconds after deployment', () => {
   assert.equal(smokeOpacity(null),1);
   assert.equal(smokeOpacity(17.5),1);
-  assert.equal(smokeOpacity(18),.5);
-  assert.equal(smokeOpacity(18.5),0);
+  assert.equal(smokeOpacity(18.5),1);
+  assert.equal(smokeOpacity(19),1);
+  assert.equal(smokeOpacity(19.5),.5);
+  assert.equal(smokeOpacity(20),0);
   assert.equal(smokeOpacity(21),0);
-  assert.equal(smokeOpacity(18,false),1);
-  assert.equal(smokeOpacity(18.5,false),0);
+  assert.equal(smokeOpacity(19.5,false),1);
+  assert.equal(smokeOpacity(20,false),0);
 });

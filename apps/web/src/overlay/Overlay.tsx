@@ -225,7 +225,7 @@ function Radar({ state, settings, now }: { state: GameState; settings: Settings;
     '--radar-header-width': `${Math.max(200, 628 - settings.hud.radarX)}px` };
   return <section className={`ov-radar ${splitNuke ? 'ov-radar-nuke' : settings.hud.radarLayer === 'both' ? 'ov-radar-both' : ''}`} style={style}>
     <header className="ov-radar-header">{series ? <MapOrder settings={settings} state={state} /> : <strong>{mapName(state.map)}</strong>}</header>
-    {config && layers?.length ? layers.map(layer => <div key={`${state.map}:${layer.id}`} className="ov-radar-layer"><div className="ov-radar-layer-name">{config.layers.length > 1 ? layer.name : ""}</div>{(config.calibrated && layer.image) ? <RadarLayer state={state} map={config} layer={layer.id} image={layer.image} hud={settings.hud} now={now} /> : <div className="ov-radar-unavailable"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="17" /><circle cx="24" cy="24" r="8" /><path d="M24 3v42M3 24h42" /></svg><strong>ОБЗОРНАЯ КАРТА<br />НЕ НАСТРОЕНА</strong></div>}</div>) : <div className="ov-radar-unavailable"><strong>КАРТА НЕ НАСТРОЕНА</strong></div>}
+    {config && layers?.length ? layers.map(layer => <div key={`${state.map}:${layer.id}`} className="ov-radar-layer">{config.id !== 'de_nuke' && config.layers.length > 1 && <div className="ov-radar-layer-name">{layer.name}</div>}{(config.calibrated && layer.image) ? <RadarLayer state={state} map={config} layer={layer.id} image={layer.image} hud={settings.hud} now={now} /> : <div className="ov-radar-unavailable"><svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="17" /><circle cx="24" cy="24" r="8" /><path d="M24 3v42M3 24h42" /></svg><strong>ОБЗОРНАЯ КАРТА<br />НЕ НАСТРОЕНА</strong></div>}</div>) : <div className="ov-radar-unavailable"><strong>КАРТА НЕ НАСТРОЕНА</strong></div>}
   </section>;
 }
 
@@ -246,7 +246,8 @@ function RadarLayer({ state, map, layer, image, hud, now }: { state: GameState; 
     const t = window.setTimeout(() => setBursts(old => old.filter(b => b.expires > performance.now())), Math.max(0, Math.min(...bursts.map(b => b.expires)) - performance.now()) + 5);
     return () => clearTimeout(t);
   }, [bursts]);
-  const smokeColor = (g: Grenade) => g.ownerSide ? hud.sideColors[g.ownerSide] : state.teams.find(t => t.id === (g.ownerTeamId ?? state.players.find(p => p.steamId === g.owner)?.teamId))?.color;
+  // The normalizer captures the side on throw; never derive it from the current roster.
+  const smokeColor = (g: Grenade) => g.ownerSide ? hud.sideColors[g.ownerSide] : undefined;
   const bounds = map.viewBounds ?? { x: 0, y: 0, width: map.size, height: map.size };
   const focusPlayers = state.players.filter(p => p.alive && p.position && selectRadarLayer(p.position, map) === layer);
   const focusPoints = focusPlayers.map(p => worldToRadar(p.position!, map));
@@ -311,7 +312,7 @@ function RadarGrenade({ grenade, map, layer, size, animate, sampleAt, ownerColor
   if (phase === 'expired' || smoke && opacity === 0) return null;
   if (phase === 'burst') return null; // Event layer owns the finite explosion animation.
   if (phase === 'fire') return <g className="ov-radar-fire"><title>Огонь</title>{grenade.flames.filter(p => selectRadarLayer(p, map) === layer).map((p, i) => { const pos = worldToRadar(p, map); return <FirePatch key={i} x={pos.x} y={pos.y} size={144 / map.scale} animate={animate} />; })}</g>;
-  return <RadarMotion x={point.x} y={point.y} sampleAt={sampleAt} animate={animate && !smoke}><title>{smoke ? 'Раскрытый дым' : `Граната: ${grenade.type}`}</title>{smoke ? <g style={{opacity}}><g className="ov-smoke-area"><defs><radialGradient id={effectId}><stop offset="0" stopColor="#d4e0e6" stopOpacity=".9" /><stop offset=".65" stopColor="#c3d2db" stopOpacity=".75" /><stop offset="1" stopColor="#bbcbd5" stopOpacity=".15" /></radialGradient></defs><circle r={160 / map.scale} fill={`url(#${effectId})`} /><circle r={144 / map.scale} fill="none" stroke="#101c29" strokeOpacity=".9" strokeWidth="7" /><circle r={144 / map.scale} fill="none" stroke={ownerColor || "#f4fbff"} strokeOpacity={ownerColor ? ".7" : ".5"} strokeWidth="3" /></g></g> : <><g className="ov-flying-grenade" transform={`translate(${-size * .8},${-size * .8}) scale(${size * 1.6 / 24})`} style={{ color: /molotov|incendiary/.test(grenade.type) ? '#ffb66b' : '#fff' }}><EquipmentIcon className="ov-radar-glyph" kind={grenadeKind(grenade.type)} /></g></>}</RadarMotion>;
+  return <RadarMotion x={point.x} y={point.y} sampleAt={sampleAt} animate={animate && !smoke}><title>{smoke ? 'Раскрытый дым' : `Граната: ${grenade.type}`}</title>{smoke ? <g style={{opacity}}><g className="ov-smoke-area"><defs><radialGradient id={effectId}><stop offset="0" stopColor="#d4e0e6" stopOpacity=".9" /><stop offset=".65" stopColor="#c3d2db" stopOpacity=".75" /><stop offset="1" stopColor="#bbcbd5" stopOpacity=".15" /></radialGradient></defs><circle r={160 / map.scale} fill={`url(#${effectId})`} /><circle r={144 / map.scale} fill="none" stroke={ownerColor || "#f4fbff"} strokeOpacity={ownerColor ? ".7" : ".5"} strokeWidth="3" /></g></g> : <><g className="ov-flying-grenade" transform={`translate(${-size * .8},${-size * .8}) scale(${size * 1.6 / 24})`} style={{ color: /molotov|incendiary/.test(grenade.type) ? '#ffb66b' : '#fff' }}><EquipmentIcon className="ov-radar-glyph" kind={grenadeKind(grenade.type)} /></g></>}</RadarMotion>;
 }
 
 function FirePatch({ x, y, size, animate }: { x: number; y: number; size: number; animate: boolean }) {
