@@ -19,7 +19,7 @@ test('map picks/results keep team identity through side swaps and hide independe
   const render=()=>renderToStaticMarkup(createElement(MapOrder,{settings,state}));
   const initial=render();
   assert.match(initial,/ov-pick-won[^>]*>13:7/); assert.match(initial,/ov-pick-lost[^>]*>9:13/);
-  assert.match(initial,/DECIDER/);
+  assert.match(initial,/Решающая карта/); assert.doesNotMatch(initial,/LIVE|DECIDER|ov-map-index/);
   state.teams.reverse();state.teams.forEach(t=>{t.side=t.side==='T'?'CT':'T';});
   assert.equal(render(),initial);
   settings.match.bestOf=1;assert.equal(render(),'');

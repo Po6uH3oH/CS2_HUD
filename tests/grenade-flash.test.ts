@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { defaultSettings, GsiNormalizer } from '../packages/core/index.js';
-import { grenadePhase, grenadeBursts, bombPulsePeriod, bombPulseFrame, expiredSmokes } from '../packages/core/grenade-presentation.js';
+import { grenadePhase, grenadeBursts, bombPulsePeriod, bombPulseFrame, smokeOpacity } from '../packages/core/grenade-presentation.js';
 import { Overlay } from '../apps/web/src/overlay/Overlay.js';
 
 test('smoke retains thrower side after death, lost owner and player removal; reused entities get fresh ownership', () => {
@@ -16,8 +16,6 @@ test('smoke retains thrower side after death, lost owner and player removal; reu
   assert.equal(s.grenades[0].ownerSide,'T');
   const rendered=renderToStaticMarkup(createElement(Overlay,{state:s,settings:defaultSettings,variant:'game'}));
   assert.match(rendered,/stroke="#ef3c50"/);
-  assert.equal(expiredSmokes(s.grenades,[]).length,1);
-  assert.equal(expiredSmokes(s.grenades,s.grenades).length,0);
   s=n.ingest({allplayers:{b:{team:'CT',state:{health:100}}},grenades:{s:{...smoke,owner:'b',lifetime:'.2'}}},defaultSettings,4000).state;
   assert.equal(s.grenades[0].ownerSide,'CT'); assert.equal(s.grenades[0].owner,'b');
 });
@@ -77,7 +75,7 @@ test('flash strength survives partial packets, clears explicitly and resets betw
   let state = n.ingest({ map: { name: 'de_nuke', round: 0 }, allplayers: { a: { name: 'Flash test', team: 'T', position: '0,0,-400', state: { health: 80, flashed: 128 } } } }, defaultSettings, 1000).state;
   assert.equal(state.players[0].flashed, 128);
   const html = renderToStaticMarkup(createElement(Overlay, { state, settings: defaultSettings, variant: 'game' }));
-  assert.match(html, /ov-flash-fill/); assert.match(html, /ov-player-flash/);
+  assert.doesNotMatch(html, /ov-flash-fill/); assert.match(html, /ov-player-flash/);
   assert.match(html, /opacity="0.5019607843137255"/);
   assert.equal(n.ingest({ allplayers: { a: { state: { health: 70 } } } }, defaultSettings, 1100).state.players[0].flashed, 128);
   assert.equal(n.ingest({ allplayers: { a: { state: { flashed: 0 } } } }, defaultSettings, 1200).state.players[0].flashed, 0);
@@ -107,4 +105,14 @@ test('unit flash values remain visible; byte streams preserve their low intensit
   assert.equal(n.ingest({allplayers:{a:{state:{flashed:1}}}},defaultSettings,1300).state.players[0].flashed,1);
   n.reset();
   assert.equal(n.ingest({allplayers:{a:{team:'T',state:{health:100,flashed:1}}}},defaultSettings,1400).state.players[0].flashed,255);
+});
+
+test('smoke fades from 17.5 to 18.5 seconds and never lingers beyond its lifetime', () => {
+  assert.equal(smokeOpacity(null),1);
+  assert.equal(smokeOpacity(17.5),1);
+  assert.equal(smokeOpacity(18),.5);
+  assert.equal(smokeOpacity(18.5),0);
+  assert.equal(smokeOpacity(21),0);
+  assert.equal(smokeOpacity(18,false),1);
+  assert.equal(smokeOpacity(18.5,false),0);
 });

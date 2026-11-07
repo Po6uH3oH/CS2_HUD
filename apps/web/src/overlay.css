@@ -110,19 +110,21 @@
 .ov-flash-burst{transform-box:fill-box;transform-origin:center;animation:ov-flash-fade .7s linear forwards}
 @keyframes ov-flash-fade{0%,65%{opacity:1}100%{opacity:0}}
 
-.ov-smoke-exit{animation:ov-smoke-out .85s ease-out forwards;pointer-events:none}
-.ov-smoke-exit .ov-smoke-area{animation:none}
-@keyframes ov-smoke-out{from{opacity:1}to{opacity:0}}
 .ov-score-bomb-beat{display:flex;align-items:center;justify-content:center;transform-origin:center;transition:scale .1s linear}
 .ov-score-bomb-beat>.ov-icon{width:50px;height:50px}
 .ov-planted-pulse{transition:scale .1s linear,opacity .1s linear}
 .ov-score-explosion{height:84px;width:150px;display:grid;place-items:center}
 .ov-score-explosion img{height:84px;width:150px;object-fit:contain}
 
-.ov-alive{left:636px;top:48px;height:56px;min-width:0;width:108px;padding:6px 10px;gap:9px}
+.ov-alive{left:644px;top:18px;height:56px;min-width:0;width:108px;padding:6px 10px;gap:9px}
 .ov-alive>span{font-size:30px;line-height:1}.ov-alive small{font-size:12px;line-height:1;letter-spacing:0}
-.ov-map-order{margin-top:10px;display:grid;gap:3px}
-.ov-map-order-row{display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,.8fr) 65px;align-items:center;gap:9px;padding:6px 10px;background:#101923ce;border-left:3px solid transparent;color:#edf3f8;font-size:20px;line-height:26px}
-.ov-map-order-row strong,.ov-map-pick{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ov-map-index{color:#98a6b5;font-size:16px}.ov-map-pick{font-size:18px;color:#bcc8d3}.ov-map-result{text-align:right;font-variant-numeric:tabular-nums}.ov-map-current{border-left-color:#fff;background:#253341e6}.ov-map-current .ov-map-result{font-size:16px}.ov-pick-won{color:#63e29b}.ov-pick-lost{color:#ff6577}
-.ov-compact-name{color:color-mix(in srgb,white,#14202c var(--flash-percent))}
-.ov-radar-series .ov-radar-map{max-height:var(--radar-layer-max-height);display:block}.ov-radar-both .ov-map-order{width:100%}
+.ov-radar>header.ov-radar-header{width:var(--radar-header-width);box-sizing:border-box;padding:0 10px;overflow:hidden}
+.ov-map-order{width:100%;height:44px;overflow:hidden;min-width:0}
+.ov-map-order-track{display:flex;align-items:center;width:max-content;height:44px;gap:10px;transform:scale(var(--strip-scale,1));transform-origin:left center}
+.ov-map-order-item{display:flex;align-items:center;gap:7px;white-space:nowrap;font-size:26px;line-height:1;flex-shrink:0;color:#9da7b4}
+.ov-map-order-item strong{font-weight:800}.ov-map-order-item.ov-map-current{color:#fff}
+.ov-map-order-item .ov-team-mark{width:32px;height:32px;flex-shrink:0;font-size:10px}.ov-map-order-item .ov-team-mark img{width:100%;height:100%;object-fit:contain}
+.ov-map-arrow{color:#fff;font-size:24px;line-height:1}.ov-map-result{font-size:24px;font-variant-numeric:tabular-nums;color:#b8c1cc}.ov-pick-won{color:#63e29b}.ov-pick-lost{color:#ff6577}
+.ov-map-scrolling .ov-map-order-track{animation:ov-map-scan var(--strip-duration) linear infinite alternate}
+.ov-map-manual-scroll{overflow-x:auto;scrollbar-width:none}.ov-map-manual-scroll::-webkit-scrollbar{display:none}
+@keyframes ov-map-scan{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--strip-travel))}}

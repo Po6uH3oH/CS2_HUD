@@ -6,7 +6,7 @@ export function MatchMaps({ settings, change }: { settings: Settings; change: (u
     update(detail);
   });
   return <div className="match-maps">
-    <label className="check"><input type="checkbox" checked={settings.hud.showMapOrder} onChange={e => change(s => { s.hud.showMapOrder = e.target.checked; })} /> Показывать порядок карт под радаром (BO3 / BO5)</label>
+    <label className="check"><input type="checkbox" checked={settings.hud.showMapOrder} onChange={e => change(s => { s.hud.showMapOrder = e.target.checked; })} /> Показывать порядок карт над радаром (BO3 / BO5)</label>
     <p className="info-note">Добавляйте карты в порядке игры. Выберите команду, которая взяла карту, или «Решающая». Итоговый счёт сохраняется из GSI после завершения карты; его можно исправить здесь. Пустой счёт — карта ещё не завершена. Зелёный результат означает победу на своём пике, красный — поражение. FACEIT передаёт порядок карт, владельцев пиков укажите вручную.</p>
     <div className="button-row" style={{flexWrap:'wrap'}}>{settings.radarMaps.map(m => <button type="button" className="button" key={m.id} disabled={settings.match.maps.includes(m.id) || settings.match.maps.length >= settings.match.bestOf} onClick={() => change(s => { s.match.maps.push(m.id); })}>+ {m.name}</button>)}</div>
     {settings.match.maps.map((map, i) => {

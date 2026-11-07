@@ -39,6 +39,9 @@ export function bombPulseFrame(seconds: number | null) {
   return { iconScale: 1 + .18 * beat, ringScale: .35 + (1 - phase) * .85, ringOpacity: phase * .85 };
 }
 
-export function expiredSmokes(previous: Grenade[], current: Grenade[]): Grenade[] {
-  return previous.filter(g => grenadePhase(g) === 'smoke' && !current.some(n => n.id === g.id && grenadePhase(n) === 'smoke'));
+/** Smoke fades during the last second of its 18.5-second life, never after removal. */
+export function smokeOpacity(effectAge: number | null, animate = true): number {
+  if (effectAge == null || effectAge <= 17.5) return 1;
+  if (effectAge >= 18.5) return 0;
+  return animate ? 18.5 - effectAge : 1;
 }
