@@ -1,3 +1,4 @@
+import { resolveTeamSides } from './team-assignment.js';
 import type { BombState, Economy, GameState, Mode, Player, RadarMap, Settings, Side, Source, TeamState, Timer, Vec3, Weapon } from '../shared/types.js';
 import { observerKey, observerOrder } from './presentation.js';
 export { defaultSettings } from './defaults.js';
@@ -135,6 +136,20 @@ export class GsiNormalizer {
   private state: GameState | null = null;
   reset(): void { this.raw = {}; this.lastTimestamp = null; this.matchId = ''; this.state = null; this.flashRange = 1; }
 
+  /** Apply operator corrections to cached telemetry without inventing a fresh GSI heartbeat. */
+  reconfigure(settings: Settings): GameState | null {
+    if (!this.state) return null;
+    const before = clone(this.state);
+    const updated = this.ingest({ map: {} }, settings, before.receivedAt).state;
+    if (before.teams[0].side !== updated.teams[0].side) {
+      const remap = (id: string) => updated.teams.find(t => t.side === before.teams.find(old => old.id === id)?.side)?.id ?? id;
+      updated.roundHistory = before.roundHistory.map(r => ({ ...r, teamId: remap(r.teamId) }));
+      updated.grenades = updated.grenades.map(g => ({ ...g, ownerTeamId: g.ownerTeamId ? remap(g.ownerTeamId) : undefined }));
+    }
+    this.state = clone(updated);
+    return updated;
+  }
+
   ingest(payload: unknown, settings: Settings, now = Date.now()): { accepted: boolean; state: GameState; reason?: string } {
     const initial = this.state ?? createInitialState(settings, 'live', now);
     if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) return { accepted: false, state: clone(initial), reason: 'GSI packet must be an object' };
@@ -178,12 +193,18 @@ export class GsiNormalizer {
     const observedCandidate = string(activePlayer.spectarget) || string(activePlayer.steamid);
     const oldById = new Map(prev.players.map(p => [p.steamId, p]));
     const sourcePlayers = Object.keys(object(raw.allplayers)).length ? object(raw.allplayers) : string(activePlayer.steamid) && side(activePlayer.team) ? { [string(activePlayer.steamid)]: activePlayer } : {};
+    const identities = Object.entries(sourcePlayers).flatMap(([steamId, entry]) => {
+      const playerSide = side(object(entry).team);
+      return playerSide ? [{ steamId, side: playerSide }] : [];
+    });
+    const assignment = resolveTeamSides(settings, identities, newContext || !this.state ? null : prev, string(map.name, settings.match.map));
+    const sides = assignment.sides;
     // Some CS2 demos report 0/1 instead of the legacy byte range. Once byte data
     // is observed, keep that scale for this source context, including its fading tail.
     if ([...Object.values(sourcePlayers), activePlayer].some(p => (nonnegative(object(object(p).state).flashed) ?? 0) > 1)) this.flashRange = 255;
     const players: Player[] = Object.entries(sourcePlayers).flatMap(([id, entry]) => {
       const p = object(entry), s = object(p.state), stats = object(p.match_stats), playerSide = side(p.team); if (!playerSide) return [];
-      const team = settings.teams.find(t => t.steamIds.includes(id) || t.roster?.some(r => r.steamId === id)) ?? settings.teams.find(t => t.id === oldById.get(id)?.teamId) ?? settings.teams.find(t => t.side === playerSide) ?? settings.teams[0];
+      const team = settings.teams[sides.indexOf(playerSide)] ?? settings.teams[0];
       const health = nonnegative(s.health), inventory = weapons(p.weapons);
       const flashed = nonnegative(s.flashed) ?? (id === string(activePlayer.steamid) ? nonnegative(object(activePlayer.state).flashed) : null);
       return [{ steamId: id, name: string(p.name, team.roster?.find(r => r.steamId === id)?.name ?? id), teamId: team.id, side: playerSide, slot: observerKey(p.observer_slot),
@@ -192,15 +213,11 @@ export class GsiNormalizer {
         kills: nonnegative(stats.kills), assists: nonnegative(stats.assists), deaths: nonnegative(stats.deaths), roundKills: nonnegative(s.round_kills), roundDamage: nonnegative(s.round_totaldmg), equipmentValue: nonnegative(s.equip_value),
         position: parseVector(p.position), deathPosition: health === 0 ? (!roundChanged ? oldById.get(id)?.deathPosition : null) ?? parseVector(p.position) ?? (!roundChanged ? oldById.get(id)?.position : null) ?? null : null, forward: parseVector(p.forward), observed: id === observedCandidate }];
     }).sort((a, b) => observerOrder(a.slot) - observerOrder(b.slot) || a.steamId.localeCompare(b.steamId));
-    const candidates = settings.teams.map((team, index) => {
-      const roster = players.filter(p => p.teamId === team.id), ct = roster.filter(p => p.side === 'CT').length, t = roster.filter(p => p.side === 'T').length;
-      return ct === t ? prev.teams[index]?.side ?? team.side : ct > t ? 'CT' : 'T';
-    }) as [Side, Side];
-    const sides = candidates[0] !== candidates[1] ? candidates : settings.teams.map(t => t.side) as [Side, Side];
     const teams = settings.teams.map((team, i) => {
       const stats = object(map[sides[i] === 'CT' ? 'team_ct' : 'team_t']);
-      return { ...clone(team), side: sides[i], score: settings.match.scoreOverride?.[i] ?? nonnegative(stats.score) ?? (newContext ? null : prev.teams[i].score),
-        seriesScore: settings.match.seriesScore[i], timeoutsLeft: settings.match.timeouts[i] ?? nonnegative(stats.timeouts_remaining), lossBonus: settings.match.lossBonus[i] };
+      const losses = nonnegative(stats.consecutive_round_losses);
+      return { ...clone(team), side: sides[i], score: settings.match.scoreOverride?.[i] ?? nonnegative(stats.score) ?? (newContext ? null : prev.teams.find(t => t.side === sides[i])?.score ?? null),
+        seriesScore: settings.match.seriesScore[i], timeoutsLeft: settings.match.timeouts[i] ?? nonnegative(stats.timeouts_remaining), lossBonus: settings.match.lossBonus[i] ?? (losses === null ? null : 1400 + Math.min(4, Math.floor(losses)) * 500) };
     }) as [TeamState, TeamState];
     const phaseName = map.phase === 'gameover' ? 'gameover' : ['paused', 'timeout_ct', 'timeout_t'].includes(string(phase.phase)) ? string(phase.phase) : round.phase === 'over' ? 'over' : string(phase.phase, string(round.phase, string(map.phase, 'unknown')));
     const phaseRemaining = nonnegative(phase.phase_ends_in), incomingPhase = object(patch.phase_countdowns);
@@ -284,7 +301,7 @@ export class GsiNormalizer {
     const winSide = side(round.win_team);
     if (!reportedWins.length && winSide && round.phase === 'over' && !history.some(h => h.round === currentRound)) history.push({ round: currentRound, side: winSide, teamId: teams.find(t => t.side === winSide)!.id, method: bombState === 'defused' ? 'defuse' : bombState === 'exploded' ? 'bomb' : 'round' });
     const capabilities = [Object.keys(object(raw.allplayers)).length > 0 && 'allplayers', players.some(p => p.position !== null) && 'positions', players.some(p => p.forward !== null) && 'directions', phaseRemaining !== null && 'countdowns', bombState !== 'unknown' && 'bomb', has(raw, 'grenades') && 'grenades', players.some(p => p.equipmentValue !== null) && 'equipment', teams.some(t => t.timeoutsLeft !== null) && 'timeouts'].filter(Boolean) as string[];
-    const warnings = [!capabilities.includes('allplayers') && 'Нет полного состава наблюдателя; проверьте режим и подписки GSI.', !capabilities.includes('positions') && 'GSI не сообщает координаты игроков.', bombState === 'planted' && bombTimer.remaining === null && 'Источник не сообщает таймер бомбы.', !settings.radarMaps.find(m => m.id === string(map.name))?.calibrated && 'Радар этой карты не откалиброван.'].filter(Boolean) as string[];
+    const warnings = [assignment.warning, !capabilities.includes('allplayers') && 'Нет полного состава наблюдателя; проверьте режим и подписки GSI.', !capabilities.includes('positions') && 'GSI не сообщает координаты игроков.', bombState === 'planted' && bombTimer.remaining === null && 'Источник не сообщает таймер бомбы.', !settings.radarMaps.find(m => m.id === string(map.name))?.calibrated && 'Радар этой карты не откалиброван.'].filter(Boolean) as string[];
     const grenades = Object.entries(object(raw.grenades)).flatMap(([id, entry]) => {
       const g = object(entry), flames = Object.values(object(g.flames)).map(parseVector).filter((p): p is Vec3 => p !== null);
       const position = parseVector(g.position) ?? (flames.length ? flames.reduce((sum, p) => ({ x: sum.x + p.x / flames.length, y: sum.y + p.y / flames.length, z: sum.z + p.z / flames.length }), { x: 0, y: 0, z: 0 }) : null);

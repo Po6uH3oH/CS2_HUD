@@ -97,7 +97,7 @@ function Scoreboard({ state, settings, now, pause }: { state: GameState; setting
       <div className="ov-score-number" style={{ '--team': state.teams[1].color } as Vars}>{val(state.teams[1].score)}</div>
       <ScoreTeam team={state.teams[1]} reverse />
     </div>
-    {settings.match.bestOf > 1 && <div className="ov-series" aria-label={`Счёт по картам ${state.teams[0].seriesScore}:${state.teams[1].seriesScore}`}><span>{Array.from({ length: Math.ceil(settings.match.bestOf / 2) }, (_, i) => <i key={i} className={i < state.teams[0].seriesScore ? 'won' : ''} />)}</span><span>{Array.from({ length: Math.ceil(settings.match.bestOf / 2) }, (_, i) => <i key={i} className={i < state.teams[1].seriesScore ? 'won' : ''} />)}</span></div>}
+    {settings.match.bestOf > 1 && <div className="ov-series" aria-label={`Счёт по картам ${state.teams[0].seriesScore}:${state.teams[1].seriesScore}`}><span>{Array.from({ length: (settings.match.bestOf === 2 ? 2 : Math.ceil(settings.match.bestOf / 2)) }, (_, i) => <i key={i} className={i < state.teams[0].seriesScore ? 'won' : ''} />)}</span><span>{Array.from({ length: (settings.match.bestOf === 2 ? 2 : Math.ceil(settings.match.bestOf / 2)) }, (_, i) => <i key={i} className={i < state.teams[1].seriesScore ? 'won' : ''} />)}</span></div>}
     {planted && <div className={`ov-timer-track ${value === null ? 'ov-timer-unknown' : ''}`} role="progressbar" aria-label={value === null ? 'Бомба: время неизвестно' : 'До взрыва бомбы'} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value === null ? undefined : Math.round(progress * 100)}><i style={{ transform: `scaleX(${progress})` }} /></div>}
   </header>;
 }

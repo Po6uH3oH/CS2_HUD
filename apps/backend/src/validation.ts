@@ -14,9 +14,10 @@ export const teamSchema = z.object({
   roster: z.array(z.object({ steamId: z.string().regex(/^\d{1,20}$/), name: text })).max(20).optional(),
 });
 export const matchSchema = z.object({
-  id, name: text, map: z.string().max(100), bestOf: z.union([z.literal(1), z.literal(3), z.literal(5)]),
+  autoSides: z.boolean().default(true),
+  id, name: text, map: z.string().max(100), bestOf: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(5)]),
   seriesScore: z.tuple([nonnegative.int().max(3), nonnegative.int().max(3)]), maps: z.array(z.string().max(100)).max(10),
-  mapDetails: z.record(z.string().max(100).regex(/^[a-zA-Z0-9_/-]+$/), z.object({ pickTeamId: id.nullable(), decider: z.boolean(), scores: z.record(id, nonnegative.int().max(999)) })).default({}),
+  mapDetails: z.record(z.string().max(100).regex(/^[a-zA-Z0-9_/-]+$/), z.object({ startingCTTeamId: id.nullable().optional(), pickTeamId: id.nullable(), decider: z.boolean(), scores: z.record(id, nonnegative.int().max(999)) })).default({}),
   faceitMatchId: z.string().max(100), scoreOverride: z.tuple([nonnegative.int().max(999), nonnegative.int().max(999)]).nullable(),
   timeouts: z.tuple([nonnegative.int().max(99).nullable(), nonnegative.int().max(99).nullable()]),
   lossBonus: z.tuple([nullableMoney, nullableMoney]),

@@ -25,6 +25,9 @@ function watchLifecycle() {
 }
 
 function secureContents(window) {
+  // Keep the native title stable so OBS can distinguish HUD from the studio.
+  // Otherwise the shared HTML <title> replaces both BrowserWindow titles.
+  window.on('page-title-updated', event => event.preventDefault());
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith(`${origin}/`) || /^https:\/\/(www\.)?twitch\.tv\/activate(?:[/?]|$)/.test(url) || (url === 'https://dev.twitch.tv/console' || url.startsWith('https://dev.twitch.tv/console/') || url === 'https://developers.faceit.com/')) void shell.openExternal(url);
     return { action: 'deny' };

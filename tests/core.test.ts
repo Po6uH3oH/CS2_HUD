@@ -198,3 +198,27 @@ test('demo resume keeps elapsed time, next advances, and overtime uses an overti
  assert.deepEqual(result.roundHistory.map(r => r.round), [1,2,3,4,5]);
  assert.ok(result.roundHistory.every(r => r.teamId === result.teams.find(t => t.side === 'CT')!.id));
  });
+
+test('per-map starting sides seed new connections and preserve identities at halftime', () => {
+  const config = settings(), n = new GsiNormalizer();
+  config.match.mapDetails = {
+    de_nuke: { pickTeamId: 'navi', decider: false, scores: {}, startingCTTeamId: 'navi' },
+    de_mirage: { pickTeamId: 'fnatic', decider: false, scores: {}, startingCTTeamId: 'fnatic' },
+  };
+  let s = n.ingest(fixture(), config).state;
+  assert.equal(s.players.find(p => p.steamId === 'alice')?.teamId, 'fnatic');
+  assert.equal(s.teams[0].side, 'CT');
+  const half = fixture(101); half.map.round = 13;
+  half.allplayers.alice.team = 'CT'; half.allplayers.bob.team = 'T';
+  s = n.ingest(half, config).state;
+  assert.equal(s.players.find(p => p.steamId === 'alice')?.teamId, 'fnatic');
+  assert.equal(s.teams[0].side, 'T');
+  const next = fixture(102); next.map.name = 'de_mirage';
+  s = n.ingest(next, config).state;
+  assert.equal(s.players.find(p => p.steamId === 'alice')?.teamId, 'navi');
+  assert.equal(s.teams[0].side, 'T');
+  config.teams[0].steamIds = ['alice']; config.teams[1].steamIds = ['bob'];
+  const fresh = new GsiNormalizer().ingest(fixture(), config).state;
+  assert.equal(fresh.players.find(p => p.steamId === 'alice')?.teamId, 'navi');
+  assert.equal(fresh.teams[0].side, 'T');
+});

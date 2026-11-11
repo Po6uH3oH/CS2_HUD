@@ -16,7 +16,7 @@ export function MapOrder({ settings, state }: { settings: Settings; state: GameS
   if (!visible) return null;
   const travel = Math.max(0, size.content - size.available);
   const scrolling = settings.match.bestOf === 5 && travel > 1 && settings.hud.animate;
-  const scale = settings.match.bestOf === 3 && size.content > 0 ? Math.min(1, size.available / size.content) : 1;
+  const scale = settings.match.bestOf <= 3 && size.content > 0 ? Math.min(1, size.available / size.content) : 1;
   const style = { '--strip-travel': `${-travel}px`, '--strip-duration': `${Math.max(8, travel / 24 + 4)}s`, '--strip-scale': scale || 1 } as CSSProperties;
   return <div ref={viewport} className={`ov-map-order ${scrolling ? 'ov-map-scrolling' : ''} ${settings.match.bestOf === 5 && !settings.hud.animate ? 'ov-map-manual-scroll' : ''}`} aria-label="Порядок карт серии" style={style}><div ref={track} className="ov-map-order-track">
     {settings.match.maps.slice(0, settings.match.bestOf).map((map, i) => {

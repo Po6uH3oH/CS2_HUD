@@ -265,6 +265,12 @@ test('GSI disconnect freezes timers and a fresh snapshot reconnects with a new t
     await h.request('/api/gsi', packet(), false);
     await new Promise(resolve => setTimeout(resolve, 1120));
     assert.equal(h.snapshot().state.connected, false); assert.equal(h.snapshot().state.roundTimer.running, false);
+    const disconnected = h.snapshot().state;
+    settings.match.autoSides = false;
+    await h.request('/api/settings', settings, true, 'PUT');
+    assert.equal(h.snapshot().state.connected, false);
+    assert.equal(h.snapshot().state.receivedAt, disconnected.receivedAt);
+    assert.deepEqual(h.snapshot().state.roundTimer, disconnected.roundTimer);
     await h.request('/api/gsi', packet(102), false);
     assert.equal(h.snapshot().state.connected, true); assert.equal(h.snapshot().state.roundTimer.running, true);
   } finally { await h.dispose(); }
@@ -286,3 +292,74 @@ test('GSI disconnect freezes timers and a fresh snapshot reconnects with a new t
     assert.equal(h.server.listening, false);
   } finally { socket.terminate(); await h.dispose(); }
  });
+
+test('BO2 records both maps for a sweep or draw and ignores repeated gameover', async () => {
+  for (const draw of [false, true]) {
+    const h = await harness();
+    try {
+      const settings = structuredClone(defaultSettings);
+      settings.match.bestOf = 2; settings.match.maps = ['de_nuke', 'de_mirage'];
+      settings.match.mapDetails = {
+        de_nuke: { pickTeamId: 'navi', decider: false, scores: {}, startingCTTeamId: 'fnatic' },
+        de_mirage: { pickTeamId: 'fnatic', decider: false, scores: {}, startingCTTeamId: 'navi' },
+      };
+      assert.equal((await h.request('/api/settings', settings, true, 'PUT')).status, 200);
+      for (const [i, map] of settings.match.maps.entries()) {
+        const p = packet(100 + i);
+        p.map = { ...p.map, name: map, phase: 'gameover', team_t: { score: i === 0 || draw ? 13 : 8 }, team_ct: { score: i === 0 || draw ? 8 : 13 } };
+        p.allplayers = {} as typeof p.allplayers;
+        assert.equal((await h.request('/api/gsi', p)).status, 200);
+        await h.request('/api/gsi', p);
+      }
+      assert.deepEqual(h.snapshot().settings.match.seriesScore, draw ? [1, 1] : [2, 0]);
+      assert.deepEqual(h.snapshot().settings.match.mapDetails.de_mirage.scores, draw ? { navi: 8, fnatic: 13 } : { navi: 13, fnatic: 8 });
+    } finally { await h.dispose(); }
+  }
+});
+
+
+test('side corrections apply immediately to cached GSI, pause and subsequent packets without restart', async () => {
+  const h = await harness();
+  try {
+    await h.request('/api/gsi', packet());
+    const before = h.snapshot();
+    assert.equal(before.state.players[0].teamId, 'fnatic');
+    const swapped = await h.request('/api/command', { type: 'swap-sides' });
+    assert.equal(swapped.status, 200);
+    let s = h.snapshot();
+    assert.equal(s.settings.match.autoSides, false);
+    assert.equal(s.state.players[0].side, 'CT'); // Server side must NEVER be fabricated.
+    assert.equal(s.state.players[0].teamId, 'navi');
+    assert.deepEqual(s.state.teams.map(t => t.side), ['CT', 'T']);
+    assert.deepEqual(s.state.teams.map(t => t.score), [3, 4]);
+    assert.equal(s.state.receivedAt, before.state.receivedAt);
+    await h.request('/api/gsi', packet(101));
+    assert.equal(h.snapshot().state.players[0].teamId, 'navi');
+    await h.request('/api/command', { type: 'pause', kind: 'tactical', duration: 60, teamId: 'navi' });
+    const paused = h.snapshot();
+    const next = structuredClone(paused.settings);
+    next.match.autoSides = true;
+    next.teams[1].steamIds = ['76561198000000001'];
+    const saved = await h.request('/api/settings', next, true, 'PUT');
+    assert.equal(saved.status, 200);
+    s = h.snapshot();
+    assert.equal(s.state.players[0].teamId, 'fnatic');
+    assert.equal(s.state.pause.active, true);
+    assert.equal(s.state.pause.teamId, 'fnatic');
+    assert.equal(s.state.roundTimer.remaining, paused.state.roundTimer.remaining);
+    assert.equal(s.state.players[0].money, paused.state.players[0].money);
+    await h.request('/api/command', { type: 'resume' });
+    assert.equal(h.snapshot().state.players[0].teamId, 'fnatic');
+    await h.request('/api/gsi', packet(102));
+    assert.equal(h.snapshot().state.players[0].teamId, 'fnatic');
+    await h.request('/api/gsi', { ...packet(103), map: { ...packet().map, team_ct: { score: 3, consecutive_round_losses: 2 } } });
+    await h.request('/api/command', { type: 'pause', kind: 'tactical', duration: 60 });
+    const bonusSettings = h.snapshot().settings;
+    bonusSettings.match.lossBonus[1] = 999;
+    await h.request('/api/settings', bonusSettings, true, 'PUT');
+    assert.equal(h.snapshot().state.teams[1].lossBonus, 999);
+    bonusSettings.match.lossBonus[1] = null;
+    await h.request('/api/settings', bonusSettings, true, 'PUT');
+    assert.equal(h.snapshot().state.teams[1].lossBonus, 2400);
+  } finally { await h.dispose(); }
+});

@@ -190,7 +190,7 @@ export function createApp(options: Options = {}) {
     const completed = completedMap(state, settings, recordedMaps);
     if (completed) {
       recordedMaps.push(completed.key);
-      settings.match.seriesScore[completed.winner] = Math.min(Math.ceil(settings.match.bestOf / 2), settings.match.seriesScore[completed.winner] + 1);
+      settings.match.seriesScore[completed.winner] = Math.min((settings.match.bestOf === 2 ? 2 : Math.ceil(settings.match.bestOf / 2)), settings.match.seriesScore[completed.winner] + 1);
       settings.match.mapDetails[state.map] = {
         ...(settings.match.mapDetails[state.map] ?? { pickTeamId: null, decider: false }),
         scores: Object.fromEntries(state.teams.map(team => [team.id, team.score!])),
@@ -209,9 +209,36 @@ export function createApp(options: Options = {}) {
   app.get('/api/gsi-recording/download', (_request, response) => response.type('application/x-ndjson').attachment(`gsi-${Date.now()}.jsonl`).send(recorder.download()));
   app.get('/api/settings', (_request, response) => response.json(settings));
   const saveSettings = (next: Settings) => {
+    const previousSettings = settings;
     const matchChanged = next.match.id !== settings.match.id || next.match.map !== settings.match.map || next.teams.some((team, i) => team.id !== settings.teams[i].id);
     settings = next; db.set('settings', settings); demo.setSettings(settings);
     if (matchChanged && state.mode === 'live') { normalizer.reset(); state = createInitialState(settings, 'live', clockNow()); manualPause = null; frozenTimers = null; pauseSnapshot = null; }
+    else if (state.mode === 'live') {
+      const before = state;
+      state = normalizer.reconfigure(settings) ?? createInitialState(settings, 'live', state.receivedAt);
+      state.connected = before.connected;
+      if (!before.connected) {
+        state.roundTimer = before.roundTimer;
+        state.bomb.timer = before.bomb.timer; state.bomb.defuseTimer = before.bomb.defuseTimer;
+        state.pause.timer = before.pause.timer;
+        state.warnings = [...new Set([...state.warnings, ...before.warnings])];
+      }
+      if (pauseSnapshot) {
+        const oldTeams = pauseSnapshot.teams;
+        const remap = (id: string) => state.teams.find(t => t.side === oldTeams.find(old => old.id === id)?.side)?.id ?? id;
+        pauseSnapshot.teams = state.teams.map((team, index) => {
+          const old = oldTeams.find(t => t.side === team.side)!;
+          return { ...team, score: settings.match.scoreOverride?.[index] ?? old.score,
+            lossBonus: previousSettings.match.lossBonus[index] !== settings.match.lossBonus[index] ? team.lossBonus : old.lossBonus,
+            timeoutsLeft: settings.match.timeouts[index] ?? old.timeoutsLeft };
+        }) as GameState['teams'];
+        pauseSnapshot.players = pauseSnapshot.players.map(p => ({ ...p, teamId: state.teams.find(t => t.side === p.side)!.id }));
+        pauseSnapshot.roundHistory = pauseSnapshot.roundHistory.map(r => ({ ...r, teamId: remap(r.teamId) }));
+        if (pauseSnapshot.winner) pauseSnapshot.winner = remap(pauseSnapshot.winner);
+        if (manualPause?.teamId) manualPause.teamId = remap(manualPause.teamId);
+      }
+    }
+    else { state = structuredClone(demo.state); }
     broadcast();
   };
   app.put('/api/settings', (request, response) => {
@@ -247,10 +274,10 @@ export function createApp(options: Options = {}) {
       manualPause = null; frozenTimers = null; pauseSnapshot = null;
       state = demo.control(command.action, { scenario: command.scenario, speed: command.speed }, clockNow());
     } else if (command.type === 'swap-sides') {
-      settings.teams = settings.teams.map(team => ({ ...team, side: team.side === 'CT' ? 'T' : 'CT' })) as Settings['teams'];
-      saveSettings(settings);
-      state.teams = state.teams.map(team => ({ ...team, side: team.side === 'CT' ? 'T' : 'CT' })) as GameState['teams'];
-      state.players = state.players.map(player => ({ ...player, side: player.side === 'CT' ? 'T' : 'CT' }));
+      const next = structuredClone(settings);
+      next.match.autoSides = false;
+      next.teams.forEach(team => { team.side = state.teams.find(t => t.id === team.id)?.side === 'CT' ? 'T' : 'CT'; });
+      saveSettings(next);
     } else if (command.type === 'reset') {
       normalizer.reset(); manualPause = null; frozenTimers = null; pauseSnapshot = null;
       state = state.mode === 'demo' ? demo.control('restart', {}, clockNow()) : createInitialState(settings, 'live', clockNow());
@@ -335,7 +362,7 @@ export function createApp(options: Options = {}) {
       next.match.scoreOverride = null; next.match.seriesScore = [0, 0]; next.match.mapDetails = {};
     }
     next.match.name = `${next.teams[0].name} vs ${next.teams[1].name}`;
-    if ([1, 3, 5].includes(Number(raw.best_of))) next.match.bestOf = Number(raw.best_of) as 1 | 3 | 5;
+    if ([1, 2, 3, 5].includes(Number(raw.best_of))) next.match.bestOf = Number(raw.best_of) as 1 | 2 | 3 | 5;
     if (typeof raw.competition_name === 'string') next.tournament.name = raw.competition_name.slice(0, 200);
     const voting = object(raw.voting) && object(raw.voting.map) ? raw.voting.map : null;
     if (voting && Array.isArray(voting.pick)) {

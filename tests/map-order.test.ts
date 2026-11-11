@@ -37,3 +37,22 @@ test('older settings gain optional HUD controls without resetting the saved matc
   assert.equal(upgraded.match.name,'Saved match');assert.deepEqual(upgraded.match.mapDetails,{});
   assert.equal(upgraded.hud.showAliveCount,true);assert.equal(upgraded.hud.showMapOrder,false);
 });
+
+test('BO2 renders two picks and two series markers per team including a draw', () => {
+  const settings = structuredClone(defaultSettings);
+  settings.match.bestOf = 2;
+  settings.match.maps = ['de_mirage', 'de_nuke'];
+  settings.match.seriesScore = [1, 1];
+  settings.hud.showMapOrder = true;
+  settings.match.mapDetails = {
+    de_mirage: { pickTeamId: 'navi', decider: false, scores: { navi: 13, fnatic: 8 }, startingCTTeamId: 'fnatic' },
+    de_nuke: { pickTeamId: 'fnatic', decider: false, scores: { navi: 7, fnatic: 13 }, startingCTTeamId: 'navi' },
+  };
+  assert.deepEqual(settingsSchema.parse(settings).match, settings.match);
+  const state = new DemoEngine(settings).control('pause', { scenario: 'live' });
+  state.teams.forEach(t => { t.seriesScore = 1; });
+  const html = renderToStaticMarkup(createElement(Overlay, { settings, state, variant: 'game' }));
+  assert.match(html, /Счёт по картам 1:1/);
+  assert.match(html, /<span><i class="won"><\/i><i class=""><\/i><\/span><span><i class="won"><\/i><i class=""><\/i><\/span>/);
+  assert.match(html, /13:8/); assert.match(html, /13:7/);
+});
