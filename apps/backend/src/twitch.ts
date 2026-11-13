@@ -1,5 +1,5 @@
-import type { GameState, Settings } from '../../../packages/shared/types';
-import { defaultTitleTemplate, renderStreamTitle } from '../../../packages/core/stream-title';
+import type { GameState, Settings } from '../../../packages/shared/types.js';
+import { defaultTitleTemplate, renderStreamTitle } from '../../../packages/core/stream-title.js';
 
 const scope = 'channel:manage:broadcast';
 export interface TwitchSettings { clientId: string; template: string; enabled: boolean }

@@ -1,4 +1,4 @@
-import type { GameState, Settings } from '../shared/types';
+import type { GameState, Settings } from '../shared/types.js';
 
 export const titleVariables = {
   team1: 'Название команды 1', team2: 'Название команды 2',

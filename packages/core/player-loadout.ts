@@ -1,4 +1,4 @@
-import type { Weapon } from '../shared/types';
+import type { Weapon } from '../shared/types.js';
 
 /** Inventory priority, independent of the currently held item. */
 export function primaryWeapon(weapons: Weapon[]): Weapon | undefined {

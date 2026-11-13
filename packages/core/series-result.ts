@@ -1,4 +1,4 @@
-import type { GameState, Settings } from '../shared/types';
+import type { GameState, Settings } from '../shared/types.js';
 export function completedMap(state: GameState, settings: Settings, recorded: string[]) {
   if (state.mode !== 'live' || !state.connected || state.phase !== 'gameover' || !state.map) return null;
   const scores = settings.teams.map(t => state.teams.find(p => p.id === t.id)?.score);

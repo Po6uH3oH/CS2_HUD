@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "noEmit": false,
+    "allowImportingTsExtensions": false,
+    "rootDir": ".",
+    "outDir": "dist/server",
+    "types": ["node"]
+  },
+  "include": ["apps/backend/**/*.ts", "packages/**/*.ts"],
+  "exclude": ["node_modules", "dist", "artifacts"]
+}

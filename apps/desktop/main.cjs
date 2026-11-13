@@ -3,14 +3,16 @@ const { WebSocket } = require('ws');
 const { spawn } = require('node:child_process');
 const { existsSync, mkdirSync, createWriteStream, writeFileSync } = require('node:fs');
 const path = require('node:path');
-const { pathToFileURL } = require('node:url');
+const { runtimePaths, serverAvailable: probeServer } = require('./runtime.cjs');
 
 const root = path.resolve(__dirname, '../..');
+const runtime = runtimePaths(root);
+app.setName('CS2 HUD');
 const smokeTest = process.argv.includes('--smoke-test');
 const port = Number(process.env.PORT || 3190);
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('Invalid local HUD port');
 const origin = `http://127.0.0.1:${port}`;
-const dataDir = path.resolve(process.env.DATA_DIR || path.join(root, 'data'));
+const dataDir = runtime.dataDir;
 mkdirSync(dataDir, { recursive: true });
 app.setPath('userData', path.join(dataDir, smokeTest ? 'desktop-test' : 'desktop'));
 let overlay, studio, tray, serverProcess, selectedDisplay, lifecycleSocket, lifecycleRetry, quitting = false;
@@ -38,20 +40,12 @@ function secureContents(window) {
   window.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
 }
 
-async function serverAvailable() {
-  try {
-    const response = await fetch(`${origin}/api/health`, { signal: AbortSignal.timeout(700) });
-    const value = await response.json();
-    return response.ok && value.ok === true && ['live', 'demo'].includes(value.mode);
-  } catch { return false; }
-}
+async function serverAvailable() { return probeServer(origin, runtime); }
 
 async function ensureServer() {
   if (await serverAvailable()) return;
-  const runtime = path.join(process.env.USERPROFILE || '', '.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin/node.exe');
-  const node = process.env.HUD_NODE || (existsSync(runtime) ? runtime : 'node');
   const output = createWriteStream(path.join(dataDir, 'desktop-server.log'), { flags: 'a' });
-  serverProcess = spawn(node, ['--import', pathToFileURL(path.join(root, 'node_modules/tsx/dist/loader.mjs')).href, path.join(root, 'apps/backend/index.ts')], {
+  serverProcess = spawn(runtime.node, runtime.args, {
     cwd: root, windowsHide: true, env: { ...process.env, PORT: String(port), DATA_DIR: dataDir }, stdio: ['ignore', 'pipe', 'pipe'],
   });
   serverProcess.stdout.pipe(output); serverProcess.stderr.pipe(output);
@@ -60,10 +54,10 @@ async function ensureServer() {
   for (let i = 0; i < 60; i++) {
     if (startupError) throw startupError;
     if (await serverAvailable()) return;
-    if (serverProcess.exitCode !== null) throw new Error('Сервер HUD завершился. Подробности: data/desktop-server.log');
+    if (serverProcess.exitCode !== null) throw new Error(`Сервер HUD завершился. Подробности: ${path.join(dataDir, 'desktop-server.log')}`);
     await new Promise(resolve => setTimeout(resolve, 250));
   }
-  throw new Error('Сервер HUD не ответил. Проверьте START.bat и data/desktop-server.log');
+  throw new Error(`Сервер HUD не ответил. Журнал: ${path.join(dataDir, 'desktop-server.log')}`);
 }
 
 function placeOverlay(displayId = selectedDisplay) {
@@ -130,7 +124,7 @@ else {
     if (smokeTest) {
       // Electron deliberately omits alpha from getBackgroundColor(). Browser QA
       // checks CSS alpha separately; this probe checks the real native window.
-      const result = { url: overlay.webContents.getURL(), backgroundRgb: overlay.getBackgroundColor(), transparentRequested: true, alwaysOnTop: overlay.isAlwaysOnTop(), focusable: overlay.isFocusable(), bounds: overlay.getBounds(), visible: overlay.isVisible(), startedServer: Boolean(serverProcess) };
+      const result = { url: overlay.webContents.getURL(), backgroundRgb: overlay.getBackgroundColor(), transparentRequested: true, alwaysOnTop: overlay.isAlwaysOnTop(), focusable: overlay.isFocusable(), bounds: overlay.getBounds(), visible: overlay.isVisible(), startedServer: Boolean(serverProcess), packaged: runtime.packaged, dataDir, node: runtime.node };
       writeFileSync(path.join(dataDir, 'desktop-smoke.json'), JSON.stringify(result, null, 2));
       if (!result.alwaysOnTop || result.focusable || !result.url.endsWith('/overlay/production')) throw new Error('Desktop window configuration failed');
       app.quit(); return;
@@ -146,7 +140,7 @@ else {
     openStudio();
   }).catch(error => {
     writeFileSync(path.join(dataDir, 'desktop-error.txt'), String(error.stack || error));
-    if (!smokeTest) dialog.showErrorBox('Не удалось запустить HUD', error.message);
+    if (!smokeTest) dialog.showErrorBox('Не удалось запустить HUD', `${error.message}\n\nЖурнал: ${path.join(dataDir, 'desktop-server.log')}`);
     if (serverProcess && serverProcess.exitCode === null) serverProcess.kill();
     app.exit(1);
   });

@@ -4,7 +4,7 @@ import { GsiRecorder } from './src/gsi-recorder.js';
 import { upgradeRadarMaps } from '../../packages/core/radar-migration.js';
 import express, { type Request, type Response, type NextFunction } from 'express';
 import { createServer } from 'node:http';
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual, createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,8 @@ import { decodeUpload } from './src/images.js';
 import { settingsSchema, commandSchema, entitySchemas, faceitSettingsSchema, obsSettingsSchema } from './src/validation.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const appVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
+const installationId = createHash('sha256').update(root.toLowerCase()).digest('hex').slice(0, 16);
 const equal = (a: string, b: string): boolean => {
   const left = Buffer.from(a), right = Buffer.from(b);
   return left.length === right.length && timingSafeEqual(left, right);
@@ -155,7 +157,7 @@ export function createApp(options: Options = {}) {
   app.use('/api/gsi', express.json({ limit: '1mb' }));
   app.use(express.json({ limit: '4mb' }));
   app.use('/api', (_request, response, next) => { response.setHeader('Cache-Control', 'no-store'); next(); });
-  app.get('/api/health', (_request, response) => response.json({ ok: true, mode: state.mode, gsiConnected: state.connected && state.mode === 'live' }));
+  app.get('/api/health', (_request, response) => response.json({ ok: true, application: 'cs2-hud', version: appVersion, installationId, mode: state.mode, gsiConnected: state.connected && state.mode === 'live' }));
   let shuttingDown = false;
   app.post('/api/shutdown', (_request, response) => {
     if (shuttingDown) { response.json({ ok: true }); return; }
@@ -390,7 +392,7 @@ export function createApp(options: Options = {}) {
   const webDir = join(root, 'dist', 'web');
   if (existsSync(webDir)) {
     app.use(express.static(webDir));
-    app.get(['/admin', '/preview', '/overlay/game', '/overlay/pause', '/overlay/production', '/'], (_request, response) => response.sendFile(join(webDir, 'index.html')));
+    app.get(['/admin', '/preview', '/overlay/game', '/overlay/pause', '/overlay/production', '/'], (_request, response) => response.sendFile('index.html', { root: webDir }));
   }
   app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
     if (error instanceof z.ZodError) { response.status(400).json({ error: 'Некорректные данные', details: error.issues.map(issue => ({ path: issue.path.join('.'), message: issue.message })) }); return; }

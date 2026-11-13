@@ -1,0 +1,59 @@
+name: Windows release
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install as a new user
+        shell: powershell
+        run: ./scripts/bootstrap.ps1 -Mode setup
+      - name: Test and package offline application
+        shell: powershell
+        run: |
+          $config = Get-Content config/runtime.json -Raw | ConvertFrom-Json
+          $node = Join-Path $PWD ".runtime/node-v$($config.nodeVersion)-win-x64/node.exe"
+          & $node node_modules/tsx/dist/cli.mjs --test tests/*.test.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $node scripts/package-windows.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CS2-HUD-Windows-x64
+          path: |
+            release/*.zip
+            release/*.sha256
+          if-no-files-found: error
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: Windows-build-log
+          path: data/setup.log
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: CS2-HUD-Windows-x64
+          path: release
+      - name: Publish verified archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --title "CS2 HUD $RELEASE_TAG" --notes "Windows x64: extract the ZIP and run CS2 HUD.exe. Node.js and dependencies are included. See READ-ME-FIRST.md." release/*.zip release/*.sha256
+          fi
